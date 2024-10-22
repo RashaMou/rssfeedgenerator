@@ -1,0 +1,51 @@
+graph TD
+%% Initial Feed Creation
+A[User Inputs URL] --> B{Automatic Analysis}
+B -->|Success| C[Generate Feed Config]
+B -->|Failure| D[Manual Selection Interface]
+D --> C
+C --> E[Store Feed Config]
+
+    %% Update Process
+    E --> F[Update Manager]
+    F --> G{Check Update Time}
+    G -->|Due| H[Fetch Website]
+    G -->|Not Due| F
+
+    H --> I[Extract Content]
+    I --> J{Detect Changes}
+
+    %% Change Detection
+    J -->|No Changes| K[Update Next Check Time]
+    J -->|Changes Found| L[Process New Content]
+    L --> M[Update Feed]
+    M --> N[Store New Items]
+    N --> K
+
+    K --> F
+
+    %% Error Handling
+    H -->|Error| O[Error Handler]
+    O -->|Temporary| P[Queue for Retry]
+    O -->|Permanent| Q[Notify User]
+    P --> F
+
+    %% Subprocesses
+    subgraph "Change Detection"
+    R[Compare Hashes]
+    S[Check URLs/GUIDs]
+    T[Content Similarity]
+    R & S & T --> J
+    end
+
+    subgraph "Content Processing"
+    U[Normalize Content]
+    V[Generate Hashes]
+    W[Extract Metadata]
+    U --> V --> W
+    end
+
+    style A fill:#d0f4de
+    style F fill:#ffcfd2
+    style J fill:#f1c0e8
+    style M fill:#cfbaf0
