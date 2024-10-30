@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <script src="src/main.ts" defer type="module"></script>
+    <link rel="stylesheet" href="src/css/styles.css" />
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Site to RSS Feed</title>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>RSS Feed Creator</h1>
+        <p>Enter a website URL to start creating your custom RSS feed</p>
+      </div>
+
+      <!-- Input section -->
+      <div class="input-section">
+        <form id="urlForm" class="url-form">
+          <div class="form-group">
+            <label for="url">Website URL</label>
+            <input
+              type="text"
+              id="url"
+              name="url"
+              placeholder="Enter URL"
+              required
+            />
+            <div id="validationMessage" class="validation-message"></div>
+          </div>
+          <button type="submit" id="submitButton">Analyze website</button>
+        </form>
+      </div>
+
+      <!-- Loading state -->
+      <div id="loading" class="loading">
+        <svg class="spinner" width="24" height="24" viewBox="0 0 24 24">
+          <circle
+            cx="12"
+            cy="12"
+            r="10"
+            fill="none"
+            stroke="#4A90E2"
+            stroke-width="3"
+            stroke-dasharray="32"
+            stroke-linecap="round"
+          />
+        </svg>
+        Analyzing website structure...
+      </div>
+
+      <!-- Error state -->
+      <div id="error" class="error">
+        Unable to analyze website. Please check the URL and try again.
+      </div>
+
+      <!-- Mapping section <-->
+      <div class="rss-mapping-container" style="display: none"></div>
+
+      <!-- Templates -->
+      <template id="website-preview-template">
+        <div class="card website-preview">
+          <h2>Website Preview</h2>
+          <div class="preview-content"></div>
+        </div>
+      </template>
+
+      <template id="element-mapping-template">
+        <div class="card element-mapping">
+          <h2>Element Mapping</h2>
+          <div class="mapping-fields">
+            <!-- Mapping fields will be inserted here -->
+          </div>
+        </div>
+      </template>
+
+      <template id="mapping-field-template">
+        <div class="mapping-field">
+          <div class="field-label"></div>
+          <div class="input-group">
+            <input type="text" class="selector-input" />
+            <button class="selector-toggle">👁️</button>
+          </div>
+        </div>
+      </template>
+
+      <template id="rss-preview-template">
+        <div class="card rss-preview">
+          <h2>RSS Preview</h2>
+          <pre></pre>
+        </div>
+      </template>
+
+      <!-- App Container -->
+      <div class="rss-mapping-container"></div>
+    </div>
+  </body>
+</html>
