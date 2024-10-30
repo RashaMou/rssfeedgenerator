@@ -33,7 +33,7 @@
       </div>
 
       <!-- Loading state -->
-      <div id="loading" class="loading">
+      <div id="loading" class="loading hidden">
         <svg class="spinner" width="24" height="24" viewBox="0 0 24 24">
           <circle
             cx="12"
@@ -50,12 +50,15 @@
       </div>
 
       <!-- Error state -->
-      <div id="error" class="error">
+      <div id="error" class="error hidden">
         Unable to analyze website. Please check the URL and try again.
       </div>
 
       <!-- Mapping section container -->
-      <div id="rss-mapping-container class="rss-mapping-container hidden"></div>
+      <div
+        id="rss-mapping-container"
+        class="rss-mapping-container hidden"
+      ></div>
 
       <!-- Templates -->
       <template id="website-preview-template">

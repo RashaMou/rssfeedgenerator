@@ -87,6 +87,10 @@ button:disabled {
   cursor: not-allowed;
 }
 
+.hidden {
+  display: none;
+}
+
 .loading {
   display: none;
   text-align: center;
