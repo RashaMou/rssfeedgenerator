@@ -25,5 +25,5 @@
     "noImplicitAny": true,
     "strictPropertyInitialization": true
   },
-  "include": ["src/**/*"]
+  "include": ["src/**/*", "tests/**/*"]
 }
