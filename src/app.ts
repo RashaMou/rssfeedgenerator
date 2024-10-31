@@ -129,7 +129,63 @@ export class RSSApp {
   }
 
   private async handleUrlSubmit(e: SubmitEvent): Promise<void> {
-    // Implement url submission handling
+    const form = e.target as HTMLFormElement;
+    const input = form.querySelector("input")?.value as string;
+    const isValid = this.validateUrl(input);
+
+    this.state.currentUrl = input;
+
+    try {
+      if (isValid) this.updateStatus("loading");
+
+      const response = await fetch("/api/analyze", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ input }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const analysisResult = await response.json();
+
+      if (analysisResult.success) {
+        console.log(analysisResult.message);
+        this.updateStatus("input");
+      }
+    } catch (err) {
+      this.updateStatus("error");
+      console.error("Analysis Failed:", err);
+    }
+  }
+
+  private updateStatus(status: RSSState["status"]): void {
+    this.state.status = status;
+
+    // show appropriate element
+    switch (status) {
+      case "loading":
+        this.loadingElement.classList.remove("hidden");
+        this.errorElement.classList.add("hidden");
+        break;
+      case "error":
+        this.errorElement.classList.remove("hidden");
+        this.loadingElement.classList.add("hidden");
+        break;
+      case "mapping":
+        this.urlForm.classList.add("hidden");
+        this.loadingElement.classList.add("hidden");
+        this.errorElement.classList.add("hidden");
+        break;
+      default:
+      case "input":
+        this.urlForm.classList.remove("hidden");
+        this.loadingElement.classList.add("hidden");
+        this.errorElement.classList.add("hidden");
+    }
   }
 
   private createFromTemplate(templateName: keyof Templates): HTMLElement {
