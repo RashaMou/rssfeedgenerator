@@ -103,7 +103,22 @@ export class RSSApp {
   }
 
   private validateUrl(url: string): boolean {
-    // check that url is valid and it returns what we need
+    let isValid = false;
+
+    const validationMessageElement = document.getElementById(
+      "validationMessage",
+    ) as HTMLElement;
+
+    try {
+      new URL(url);
+      isValid = true;
+      validationMessageElement.textContent = "";
+    } catch {
+      validationMessageElement.textContent =
+        "Please enter a valid URL, including https://";
+    }
+
+    return isValid;
   }
 
   private setupEventListeners() {
