@@ -135,30 +135,32 @@ export class RSSApp {
 
     this.state.currentUrl = input;
 
-    try {
-      if (isValid) this.updateStatus("loading");
+    if (isValid) {
+      try {
+        this.updateStatus("loading");
 
-      const response = await fetch("/api/analyze", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ input }),
-      });
+        const response = await fetch("/api/analyze", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ input }),
+        });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const analysisResult = await response.json();
+
+        if (analysisResult.success) {
+          console.log(analysisResult.message);
+          this.updateStatus("input");
+        }
+      } catch (err) {
+        this.updateStatus("error");
+        console.error("Analysis Failed:", err);
       }
-
-      const analysisResult = await response.json();
-
-      if (analysisResult.success) {
-        console.log(analysisResult.message);
-        this.updateStatus("input");
-      }
-    } catch (err) {
-      this.updateStatus("error");
-      console.error("Analysis Failed:", err);
     }
   }
 
@@ -169,22 +171,31 @@ export class RSSApp {
     switch (status) {
       case "loading":
         this.loadingElement.classList.remove("hidden");
+        this.loadingElement.classList.add("active");
+        this.errorElement.classList.remove("active");
         this.errorElement.classList.add("hidden");
         break;
       case "error":
         this.errorElement.classList.remove("hidden");
+        this.errorElement.classList.add("active");
+        this.loadingElement.classList.remove("active");
         this.loadingElement.classList.add("hidden");
         break;
       case "mapping":
         this.urlForm.classList.add("hidden");
         this.loadingElement.classList.add("hidden");
+        this.loadingElement.classList.remove("active");
         this.errorElement.classList.add("hidden");
+        this.errorElement.classList.remove("active");
         break;
       default:
       case "input":
         this.urlForm.classList.remove("hidden");
+        this.urlForm.style.display = "block";
         this.loadingElement.classList.add("hidden");
+        this.loadingElement.classList.remove("active");
         this.errorElement.classList.add("hidden");
+        this.errorElement.classList.remove("active");
     }
   }
 
