@@ -1,6 +1,9 @@
 import cors from "cors";
 import routes from "./routes.ts";
 import express, { Express } from "express";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 const app: Express = express();
 const port: number = parseInt(process.env.PORT || "8080", 10);

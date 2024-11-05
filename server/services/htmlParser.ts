@@ -251,6 +251,171 @@ export class HtmlParser {
     }
   }
 
+  private getFullUrl(url: string): string {
+    if (!url.startsWith("http")) {
+      return this.siteUrl + url;
+    }
+
+    return url;
+  }
+
+  private async requestLlmAssistance(
+    $: cheerio.Root,
+  ): Promise<AnalysisResult | null> {
+    this.log("Attempting GPT-3.5 Turbo analysis...");
+
+    try {
+      // Clone body and clean it
+      const $content = $("body").clone();
+      $content
+        .find(
+          'nav, header, footer, script, style, noscript, iframe, [class*="nav"], [class*="header"], [class*="footer"], [role="navigation"]',
+        )
+        .remove();
+
+      // Get cleaned HTML
+      const sampleContent = $content.html() || "";
+
+      const prompt = `You are a feed analyzer that identifies patterns in HTML to extract RSS feed items. Analyze this HTML sample and identify the repeating structure for feed items.
+
+Page URL: ${this.siteUrl}
+
+I need to reliably extract:
+- Title
+- URL
+- Publication date (if available)
+- Author (if available)
+- Content/description (if available)
+
+Calculate confidence score (0.0-1.0) based on:
+- How consistent the HTML structure is across items
+- Whether clear semantic markers or classes exist
+- Quality of item separation (clear containers)
+- Presence of required fields (title, url, date)
+- Reliability of date formats
+- Whether content areas are clearly defined
+
+IMPORTANT: Respond with ONLY the raw JSON object, no markdown, no code blocks, no explanation. The response must be valid JSON in this format:
+
+{
+  "pattern": "description of the content pattern",
+  "selectors": {
+    "container": "selector for each item container",
+    "title": "selector for title",
+    "link": "selector for URL",
+    "date": "selector for date",
+    "author": "selector for author",
+    "content": "selector for content"
+  },
+  "confidence": 0.0-1.0,
+  "parsing_notes": "any special instructions"
+}
+
+HTML sample:
+${sampleContent}`;
+
+      const response = await fetch(
+        "https://api.openai.com/v1/chat/completions",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+          },
+          body: JSON.stringify({
+            model: "gpt-3.5-turbo",
+            messages: [
+              {
+                role: "system",
+                content:
+                  "You are an expert at analyzing HTML structure and identifying patterns for RSS feed generation.",
+              },
+              {
+                role: "user",
+                content: prompt,
+              },
+            ],
+            temperature: 0.3,
+            max_tokens: 500,
+          }),
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          `GPT API call failed with status ${response.status}: ${response.statusText}`,
+        );
+      }
+
+      const analysis = await response.json();
+      const llmResponse = analysis.choices[0].message.content;
+
+      try {
+        const llmSuggestions = JSON.parse(llmResponse);
+
+        if (llmSuggestions.confidence < 0.6) {
+          this.log("GPT confidence too low, skipping results");
+          return null;
+        }
+
+        // Extract items using suggested selectors
+        const items: FeedItem[] = [];
+        $(llmSuggestions.selectors.container).each((_, element) => {
+          const $item = $(element);
+
+          // Try to get absolute URL
+          const rawUrl = $item.find(llmSuggestions.selectors.link).attr("href");
+          const absoluteUrl = rawUrl ? this.getFullUrl(rawUrl) : "";
+
+          const item: FeedItem = {
+            title: {
+              text: $item.find(llmSuggestions.selectors.title).text().trim(),
+              html: $item.find(llmSuggestions.selectors.title).html() || "",
+            },
+            url: {
+              text: absoluteUrl,
+              html:
+                $item.find(llmSuggestions.selectors.link).prop("outerHTML") ||
+                "",
+            },
+            date: {
+              text: $item.find(llmSuggestions.selectors.date).text().trim(),
+              html: $item.find(llmSuggestions.selectors.date).html() || "",
+            },
+            author: {
+              text: $item.find(llmSuggestions.selectors.author).text().trim(),
+              html: $item.find(llmSuggestions.selectors.author).html() || "",
+            },
+            description: {
+              text: $item.find(llmSuggestions.selectors.content).text().trim(),
+              html: $item.find(llmSuggestions.selectors.content).html() || "",
+            },
+          };
+
+          if (item.title.text && item.url.text) {
+            items.push(item);
+          }
+        });
+
+        if (items.length > 0) {
+          return {
+            items,
+            source: "gpt-analysis",
+            logs: this.logs,
+            html: this.html,
+          };
+        }
+      } catch (error) {
+        this.log(`Error parsing GPT response: ${error}`);
+      }
+
+      return null;
+    } catch (error) {
+      this.log(`GPT analysis failed: ${error}`);
+      return null;
+    }
+  }
+
   public async analyze(): Promise<AnalysisResult | null> {
     this.logs = [];
     try {
