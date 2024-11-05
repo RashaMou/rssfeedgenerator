@@ -36,12 +36,109 @@ export class HtmlParser {
       }
 
       const rawHtml = await response.text();
-      const $ = cheerio.load(rawHtml);
-      return $;
+
+      // only send sanitized html to client, keep original for parsing
+      const $forDisplay = cheerio.load(rawHtml);
+      const $ToParse = cheerio.load(rawHtml);
+
+      const sanitizedHtml = this.sanitizeHtml($forDisplay);
+      this.html = sanitizedHtml;
+      return $ToParse;
     } catch (error) {
       this.log(`Error fetching HTML: ${error}`);
       throw error;
     }
+  }
+
+  private sanitizeHtml($: cheerio.Root): string {
+    // 1. Remove dangerous elements completely
+    const dangerousElements = [
+      "script",
+      "iframe",
+      "object",
+      "embed",
+      "form",
+      "input",
+      "button",
+      "noscript",
+      "meta",
+      "base",
+    ];
+
+    dangerousElements.forEach((tag) => {
+      $(tag).remove();
+    });
+
+    // 2. Clean remaining elements
+    $("*").each((_, element: cheerio.Element) => {
+      const el = $(element);
+      const attributes = (
+        element as unknown as { attribs: Record<string, string> }
+      ).attribs;
+
+      if (attributes) {
+        // Remove all on* event handlers and dangerous attributes
+        Object.keys(attributes).forEach((attr) => {
+          const name = attr.toLowerCase();
+
+          if (
+            name.startsWith("on") ||
+            name.includes("tracking") ||
+            name.includes("analytics") ||
+            name.startsWith("data-analytics") ||
+            name.startsWith("data-tracking")
+          ) {
+            el.removeAttr(attr);
+          }
+
+          // Clean up hrefs and src
+          if (name === "href" || name === "src") {
+            const value = attributes[attr].toLowerCase();
+            if (
+              value.startsWith("javascript:") ||
+              (value.startsWith("data:") && !value.startsWith("data:image/"))
+            ) {
+              el.removeAttr(attr);
+            }
+          }
+        });
+      }
+
+      // Remove elements with display:none or visibility:hidden
+      const style = el.attr("style") || "";
+      if (
+        style.includes("display: none") ||
+        style.includes("visibility: hidden") ||
+        style.includes("opacity: 0")
+      ) {
+        el.remove();
+      }
+
+      // Remove common tracker and comment sections
+      const classAndId =
+        `${el.attr("class") || ""} ${el.attr("id") || ""}`.toLowerCase();
+      if (
+        classAndId.match(
+          /(comment|tracker|analytics|ad-|advertisement|social-share|newsletter|popup|modal)/,
+        )
+      ) {
+        el.remove();
+      }
+    });
+
+    // Remove link functionality while keeping the visual structure
+    $("a").each((_, element) => {
+      const el = $(element);
+      // Store the href as a data attribute for reference
+      const href = el.attr("href");
+      if (href) {
+        el.attr("data-href", href);
+      }
+      // make link unclickable
+      el.removeAttr("href");
+    });
+
+    return $.html();
   }
 
   private async trySemanticAnalysis(
