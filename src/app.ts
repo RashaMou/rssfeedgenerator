@@ -1,23 +1,4 @@
-interface RSSState {
-  status: "input" | "loading" | "error" | "mapping";
-  currentUrl: string;
-  mappings: RSSMappings;
-  preview: string | null;
-}
-
-interface Templates {
-  websitePreview: HTMLTemplateElement;
-  elementMapping: HTMLTemplateElement;
-  rssPreview: HTMLTemplateElement;
-  mappingFields: HTMLTemplateElement;
-}
-
-interface RSSMappings {
-  title: string;
-  date: string;
-  content: string;
-  author: string;
-}
+import { RSSState, Templates } from "./types";
 
 export class RSSApp {
   private state: RSSState;
