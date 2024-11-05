@@ -240,6 +240,25 @@ export class RSSApp {
     });
 
     this.mappingContainer.appendChild(rssPreviewClone);
+
+    // add event listener to generate feed button
+    const generateButton = document.getElementById("generate-feed");
+    generateButton?.addEventListener("click", async () => {
+      const response = await fetch("/api/generate-feed", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          feedItems: this.state.feedItems,
+          siteUrl: this.state.currentUrl,
+        }),
+      });
+
+      const feedLink = await response.text();
+      const feedLinkElement = document.createElement("a");
+      feedLinkElement.href = feedLink;
+      feedLinkElement.textContent = "View RSS Feed";
+      this.mappingContainer.appendChild(feedLinkElement);
+    });
   }
 
   private hasDirectText(element: Element): boolean {

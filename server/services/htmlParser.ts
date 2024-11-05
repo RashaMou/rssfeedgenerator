@@ -339,7 +339,7 @@ export class HtmlParser {
     try {
       const parsed = new Date(dateStr);
       return {
-        text: parsed.toISOString(),
+        text: parsed.toUTCString().replace("GMT", "+0000"),
         html: element.prop("outerHTML") || "",
       };
     } catch (e) {
