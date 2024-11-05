@@ -1,5 +1,5 @@
 import * as cheerio from "cheerio";
-import { AnalysisResult } from "./types";
+import { AnalysisResult, FeedItem, FeedItemProperty } from "./types";
 
 export class HtmlParser {
   private logs: string[] = [];
@@ -41,6 +41,213 @@ export class HtmlParser {
     } catch (error) {
       this.log(`Error fetching HTML: ${error}`);
       throw error;
+    }
+  }
+
+  private async trySemanticAnalysis(
+    $: cheerio.Root,
+  ): Promise<AnalysisResult | null> {
+    this.log("Attempting semantic analysis...");
+
+    try {
+      let articles = $("article");
+      this.log(`Found ${articles.length} article elements`);
+
+      if (articles.length === 0) {
+        const mainContent = $("main");
+        this.log(`No article elements found, checking main element...`);
+        if (mainContent.length) {
+          const primarySelectors = [
+            "article",
+            "section",
+            "[role='article']",
+            ".post",
+            ".entry",
+            ".content",
+            ".article",
+            ".story",
+            ".blog-post",
+            ".entry-content",
+            ".post-content",
+          ].join(", ");
+
+          articles = mainContent.find(primarySelectors);
+          this.log(`Found ${articles.length} section elements within main`);
+        }
+      }
+
+      if (articles.length === 0) {
+        this.log("No semantic article or section elements found");
+        return null;
+      }
+
+      const feedItems: FeedItem[] = [];
+
+      articles.each((index, article) => {
+        this.log(`Processing article ${index}/${articles.length}`);
+        const $article = $(article);
+        const item: Partial<FeedItem> = {};
+
+        // Extract title: Check multiple semantic patterns
+        const titleSelectors = [
+          "h1",
+          "h2",
+          "h3",
+          '[itemprop="headline"]',
+          "header h1",
+          "header h2",
+          ".title",
+        ];
+
+        // extract text
+        const titleElement = $article.find(titleSelectors.join(", "));
+        item.title = {
+          text: titleElement.text().trim() || "",
+          html: titleElement.prop("outerHTML") || "",
+        };
+
+        this.log(
+          `Article ${index} - Title found: ${item.title.text ? "Yes" : "No"}`,
+        );
+
+        // Extract URL: Look for the main link
+        const mainLink =
+          $article
+            .find("h1 a[href], h2 a[href], h3 a[href], .title a[href]")
+            .first() || $article.find("a[href]").first();
+        item.url = this.extractUrl($, mainLink);
+
+        this.log(
+          `Article ${index} - URL found: ${item.url.text ? "Yes" : "No"}`,
+        );
+
+        // Extract date: First look for adjacent time element, then fallback to within article
+        let timeElement = $(article).prev("time");
+        if (!timeElement.length) {
+          // If no adjacent time element, look within the article
+          timeElement = $(article)
+            .find('time, [itemprop="datePublished"]')
+            .first();
+        }
+        item.date = this.extractDate($, timeElement);
+        this.log(
+          `Article ${index} - Date found: ${item.date.text ? item.date.text : "No"}`,
+        );
+
+        // Extract author: Look for semantic author markers
+        const authorSelectors = [
+          '[itemprop="author"]',
+          '[rel="author"]',
+          ".author",
+          ".byline",
+        ];
+
+        const authorElement = $article.find(authorSelectors.join(", "));
+        item.author = {
+          text: authorElement.text().trim() || "",
+          html: authorElement.prop("outerHTML") || "",
+        };
+        this.log(
+          `Article ${index} - Author found: ${item.author.text ? "Yes" : "No"}`,
+        );
+
+        // Extract content: Look for the main content area
+        const contentSelectors = [
+          '[itemprop="articleBody"]',
+          ".content",
+          ".entry-content",
+          "p",
+        ];
+        const contentElement = $article
+          .find(contentSelectors.join(", "))
+          .first();
+
+        // Clone and clean the content
+        item.description = {
+          text: contentElement.text().trim() || "",
+          html: contentElement.prop("outerHTML") || "",
+        };
+
+        this.log(
+          `Article ${index} - Content length: ${item.description.text.length} characters`,
+        );
+
+        // Only add items that have at least a title and a url
+        if (item.title.text && item.url.text) {
+          feedItems.push(item as FeedItem);
+        } else {
+          this.log(`Article ${index} - Skipped (no title or content)`);
+        }
+      });
+
+      if (feedItems.length > 0) {
+        this.log(
+          `Semantic analysis complete - Found ${feedItems.length} valid feed items`,
+        );
+
+        return {
+          items: feedItems,
+          source: "semantic-analysis",
+          logs: this.logs,
+          html: this.html,
+        };
+      }
+
+      this.log("Semantic analysis complete - No valid feed items found");
+
+      return null;
+    } catch (error) {
+      this.log(`Error in semantic analysis: ${error}`);
+      return null;
+    }
+  }
+
+  private extractUrl(
+    $: cheerio.Root,
+    urlElement: cheerio.Cheerio,
+  ): FeedItemProperty {
+    const href =
+      urlElement.attr("href") ||
+      $('link[rel="canonical"]').attr("href") ||
+      $('meta[property="og:url"]').attr("content");
+
+    if (!href) {
+      return { text: "", html: "" };
+    }
+
+    try {
+      return {
+        text: new URL(href, this.siteUrl).toString(),
+        html: urlElement.prop("outerHTML"),
+      };
+    } catch (e) {
+      this.log(`Invalid URL: ${href}`);
+      return { text: "", html: "" };
+    }
+  }
+
+  private extractDate(
+    $: cheerio.Root,
+    element: cheerio.Cheerio,
+  ): FeedItemProperty {
+    if (element.length === 0) return { text: "", html: "" };
+
+    // Try multiple date sources
+    const dateStr =
+      element.attr("datetime") ||
+      element.attr("content") ||
+      $('meta[property="article:published_time"]').attr("content") ||
+      element.text().trim();
+
+    try {
+      const parsed = new Date(dateStr);
+      return {
+        text: parsed.toISOString(),
+        html: element.prop("outerHTML") || "",
+      };
+    } catch (e) {
+      this.log(`Invalid date: ${dateStr}`);
+      return { text: "", html: "" };
     }
   }
 
