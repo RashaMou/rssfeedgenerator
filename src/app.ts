@@ -2,7 +2,7 @@ import { RSSState, Templates } from "./types";
 
 export class RSSApp {
   private state: RSSState;
-  private container!: HTMLElement;
+  private mappingContainer!: HTMLElement;
   private urlForm!: HTMLFormElement;
   private loadingElement!: HTMLElement;
   private errorElement!: HTMLElement;
@@ -12,13 +12,9 @@ export class RSSApp {
     this.state = {
       status: "input",
       currentUrl: "",
-      mappings: {
-        title: ".post-title",
-        date: ".post-date",
-        content: ".post-content",
-        author: ".post-author",
-      },
       preview: null,
+      iframeDocument: null,
+      feedItems: [],
     };
 
     this.init();
@@ -27,7 +23,7 @@ export class RSSApp {
   private init(): void {
     // Initialize DOM elements
     const urlFormElement = document.getElementById("urlForm") as HTMLElement;
-    const containerElement = document.querySelector(
+    const mappingContainerElement = document.querySelector(
       ".rss-mapping-container",
     ) as HTMLElement;
     const loadingElement = document.getElementById("loading") as HTMLElement;
@@ -35,7 +31,7 @@ export class RSSApp {
 
     // Type guard DOM elements
     if (
-      !containerElement ||
+      !mappingContainerElement ||
       !urlFormElement ||
       !loadingElement ||
       !errorElement
@@ -48,7 +44,7 @@ export class RSSApp {
       throw new Error("URL form element is not a form");
     }
 
-    this.container = containerElement;
+    this.mappingContainer = mappingContainerElement;
     this.urlForm = urlFormElement;
     this.loadingElement = loadingElement;
     this.errorElement = errorElement;
@@ -61,11 +57,11 @@ export class RSSApp {
       elementMapping: document.getElementById(
         "element-mapping-template",
       ) as HTMLTemplateElement,
-      mappingFields: document.getElementById(
-        "mapping-field-template",
+      feedFields: document.getElementById(
+        "feed-field-template",
       ) as HTMLTemplateElement,
       rssPreview: document.getElementById(
-        "mapping-field-template",
+        "rss-preview-template",
       ) as HTMLTemplateElement,
     };
 
@@ -73,7 +69,7 @@ export class RSSApp {
     if (
       !this.templates.websitePreview ||
       !this.templates.elementMapping ||
-      !this.templates.mappingFields ||
+      !this.templates.feedFields ||
       !this.templates.rssPreview
     ) {
       throw new Error("Required template elements not found");
@@ -83,6 +79,25 @@ export class RSSApp {
     this.setupEventListeners();
   }
 
+  STATUS_CONFIG = {
+    loading: {
+      show: ["loadingElement"],
+      hide: ["errorElement", "urlForm", "mappingContainer"],
+    },
+    error: {
+      show: ["errorElement"],
+      hide: ["loadingElement", "urlForm", "mappingContainer"],
+    },
+    mapping: {
+      show: ["mappingContainer"],
+      hide: ["urlForm", "loadingElement", "errorElement"],
+    },
+    input: {
+      show: ["urlForm"],
+      hide: ["loadingElement", "errorElement", "mappingContainer"],
+    },
+  } as const;
+
   private validateUrl(url: string): boolean {
     let isValid = false;
 
@@ -91,7 +106,14 @@ export class RSSApp {
     ) as HTMLElement;
 
     try {
+      // check basic format
       new URL(url);
+
+      // check domain existence
+
+      // check length
+
+      // check content-type or response
       isValid = true;
       validationMessageElement.textContent = "";
     } catch {
@@ -120,13 +142,15 @@ export class RSSApp {
       try {
         this.updateStatus("loading");
 
-        const response = await fetch("/api/analyze", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
+        const response = await fetch(
+          `/api/analyze/${encodeURIComponent(input)}`,
+          {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+            },
           },
-          body: JSON.stringify({ input }),
-        });
+        );
 
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
@@ -135,8 +159,9 @@ export class RSSApp {
         const analysisResult = await response.json();
 
         if (analysisResult.success) {
-          console.log(analysisResult.message);
           this.updateStatus("input");
+          this.state.feedItems = analysisResult.result.items;
+          this.mountMappingTemplates(String(analysisResult.result.html));
         }
       } catch (err) {
         this.updateStatus("error");
@@ -145,39 +170,126 @@ export class RSSApp {
     }
   }
 
+  private mountMappingTemplates(html: string): void {
+    // Element mapping
+    const elementMappingClone = this.createFromTemplate("elementMapping");
+    this.mappingContainer.appendChild(elementMappingClone);
+
+    // website preview
+    const websitePreviewClone = this.createFromTemplate("websitePreview");
+
+    const iframe = websitePreviewClone.querySelector(
+      "#website-preview-iframe",
+    ) as HTMLIFrameElement;
+
+    if (iframe) {
+      // Inject <base> tag at the start of the <head> section
+      const baseTag = `<base href="${this.state.currentUrl}">`;
+      const modifiedHtml = html.replace(
+        /<head>/i, // Find the <head> tag to insert the <base> tag after it
+        `<head>${baseTag}`,
+      );
+      this.mappingContainer.appendChild(websitePreviewClone);
+      iframe.srcdoc = modifiedHtml;
+      iframe.onload = () => {
+        const iframeDocument: Document =
+          iframe.contentDocument! || iframe.contentWindow?.document;
+
+        this.state.iframeDocument = iframeDocument;
+
+        this.addIframeEventListeners(iframeDocument);
+        this.updateStatus("mapping");
+      };
+    } else {
+      console.log("iframe element not found in the cloned template.");
+    }
+
+    // rss preview
+    const rssPreviewClone = this.createFromTemplate("rssPreview");
+    const feedItemsDiv = rssPreviewClone.querySelector("#feedItems");
+
+    if (!feedItemsDiv) {
+      console.error("Feed items container not found in template");
+      return;
+    }
+
+    this.state.feedItems.forEach((feedItem) => {
+      const itemDiv = document.createElement("div");
+
+      const fields = {
+        title: feedItem.title.text,
+        author: feedItem.author.text,
+        date: feedItem.date.text,
+        url: feedItem.url.text,
+        description: feedItem.description.text,
+      };
+
+      for (const [fieldName, content] of Object.entries(fields)) {
+        const fieldElement = this.createFromTemplate("feedFields");
+        const nameElement = fieldElement.querySelector(".field-name");
+        const contentElement = fieldElement.querySelector(".field-content");
+
+        if (nameElement && contentElement) {
+          nameElement.textContent = fieldName;
+          contentElement.textContent = content || `No ${fieldName} found`;
+          itemDiv.appendChild(fieldElement);
+        }
+      }
+
+      feedItemsDiv.appendChild(itemDiv);
+    });
+
+    this.mappingContainer.appendChild(rssPreviewClone);
+  }
+
+  private hasDirectText(element: Element): boolean {
+    return Array.from(element.childNodes).some(
+      (node) => node.nodeType === Node.TEXT_NODE && node.textContent?.trim(),
+    );
+  }
+
+  private addIframeEventListeners(iframeDocument: Document): void {
+    iframeDocument.addEventListener("mouseover", (event) => {
+      const target = event.target as HTMLElement;
+      if (this.hasDirectText(target)) {
+        target.addEventListener("mouseenter", () => {
+          target.style.border = "1px solid pink";
+          target.style.cursor = "pointer";
+        });
+
+        target.addEventListener("mouseleave", () => {
+          target.style.border = "";
+        });
+      }
+    });
+  }
   private updateStatus(status: RSSState["status"]): void {
     this.state.status = status;
 
-    // show appropriate element
-    switch (status) {
-      case "loading":
-        this.loadingElement.classList.remove("hidden");
-        this.loadingElement.classList.add("active");
-        this.errorElement.classList.remove("active");
-        this.errorElement.classList.add("hidden");
-        break;
-      case "error":
-        this.errorElement.classList.remove("hidden");
-        this.errorElement.classList.add("active");
-        this.loadingElement.classList.remove("active");
-        this.loadingElement.classList.add("hidden");
-        break;
-      case "mapping":
-        this.urlForm.classList.add("hidden");
-        this.loadingElement.classList.add("hidden");
-        this.loadingElement.classList.remove("active");
-        this.errorElement.classList.add("hidden");
-        this.errorElement.classList.remove("active");
-        break;
-      default:
-      case "input":
-        this.urlForm.classList.remove("hidden");
-        this.urlForm.style.display = "block";
-        this.loadingElement.classList.add("hidden");
-        this.loadingElement.classList.remove("active");
-        this.errorElement.classList.add("hidden");
-        this.errorElement.classList.remove("active");
-    }
+    const config = this.STATUS_CONFIG[status] || this.STATUS_CONFIG.input;
+
+    const elements = {
+      loadingElement: this.loadingElement,
+      errorElement: this.errorElement,
+      urlForm: this.urlForm,
+      mappingContainer: this.mappingContainer,
+    };
+
+    config.show.forEach((elementName) => {
+      const element = elements[elementName];
+      if (element) {
+        element.classList.remove("hidden");
+        element.classList.add("active");
+      }
+    });
+
+    config.hide.forEach((elementName) => {
+      const element = elements[elementName];
+      if (element) {
+        element.classList.add("hidden");
+        element.classList.remove("active");
+      }
+    });
   }
 
   private createFromTemplate(templateName: keyof Templates): HTMLElement {
@@ -185,19 +297,5 @@ export class RSSApp {
       true,
     ) as HTMLElement;
     return clone;
-  }
-
-  private setupMappingComponents(): void {
-    // create the website preview, element mapping, and rss preview sections from templates
-    // populate them with content and append them to the rss-mapping-container
-  }
-
-  private setupMappingFields(): void {
-    // create the mapping fields from the templates, populate them with content
-    // and append them to the rss-mapping-container
-  }
-
-  private setupMappingEventListeners(): void {
-    // event listeners for mapping fields interactions
   }
 }

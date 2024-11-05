@@ -2,6 +2,7 @@
 <html lang="en">
   <head>
     <script src="src/main.ts" defer type="module"></script>
+    <link rel="stylesheet" href="src/css/normalize.css" />
     <link rel="stylesheet" href="src/css/styles.css" />
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -64,6 +65,7 @@
       <template id="website-preview-template">
         <div class="card website-preview">
           <h2>Website Preview</h2>
+          <iframe id="website-preview-iframe" src="about:blank"></iframe>
           <div class="preview-content"></div>
         </div>
       </template>
@@ -72,20 +74,21 @@
       <template id="element-mapping-template">
         <div class="card element-mapping">
           <h2>Element Mapping</h2>
-          <div class="mapping-fields">
-            <!-- Mapping fields will be inserted here -->
+          <div>
+            <h3>Container ></h3>
+            <h3>Title ></h3>
+            <h3>Date ></h3>
+            <h3>Author ></h3>
+            <h3>Content ></h3>
           </div>
         </div>
       </template>
 
-      <!-- Individual mapped elements -->
-      <template id="mapping-field-template">
-        <div class="mapping-field">
-          <div class="field-label"></div>
-          <div class="input-group">
-            <input type="text" class="selector-input" />
-            <button class="selector-toggle">👁️</button>
-          </div>
+      <!-- Individual mapped elements for rss preview -->
+      <template id="feed-field-template">
+        <div class="feed-field">
+          <h3 class="field-name"></h3>
+          <div class="field-content"></div>
         </div>
       </template>
 
@@ -93,7 +96,9 @@
       <template id="rss-preview-template">
         <div class="card rss-preview">
           <h2>RSS Preview</h2>
-          <pre></pre>
+          <div id="feedItems">
+            <!-- feed-field-template goes here-->
+          </div>
         </div>
       </template>
     </div>
