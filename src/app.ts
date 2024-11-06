@@ -1,4 +1,5 @@
 import { RSSState, Templates } from "./types";
+import getElementPath from "./utils/getElementPath";
 
 export class RSSApp {
   private state: RSSState;
@@ -7,6 +8,8 @@ export class RSSApp {
   private loadingElement!: HTMLElement;
   private errorElement!: HTMLElement;
   private templates!: Templates;
+  private currentElementClickHandler: EventListener = (event) =>
+    this.handleElementClick(event, this.state.activeSelector);
 
   constructor() {
     this.state = {
@@ -14,7 +17,11 @@ export class RSSApp {
       currentUrl: "",
       preview: null,
       iframeDocument: null,
-      feedItems: [],
+      originalFeedItems: [],
+      currentFeedItems: [],
+      selectionMode: false,
+      activeSelector: "",
+      html: "",
     };
 
     this.init();
@@ -131,6 +138,99 @@ export class RSSApp {
     });
   }
 
+  private toggleSelectionMode(buttonId: string): void {
+    // if we don't already have an activeSelector
+    if (!this.state.activeSelector) {
+      this.state.selectionMode = true;
+      this.state.activeSelector = buttonId;
+    }
+
+    // if we do already have an activeSelector
+    if (this.state.selectionMode && this.state.activeSelector !== buttonId) {
+      this.state.activeSelector = buttonId;
+      this.state.iframeDocument!.removeEventListener(
+        "click",
+        this.currentElementClickHandler,
+      );
+    }
+
+    if (this.state.selectionMode) {
+      this.state.iframeDocument!.addEventListener(
+        "click",
+        this.currentElementClickHandler,
+      );
+    }
+  }
+
+  private handleElementClick(event: Event, buttonId: string): void {
+    event.preventDefault();
+
+    const selectedElement = event.target as HTMLElement;
+    console.log("We selected element:", selectedElement.textContent);
+    const elementPath = getElementPath(selectedElement);
+
+    const pathTextContainer = document.getElementById(`${buttonId}-path`);
+    console.log("pathTextContainer", pathTextContainer);
+    pathTextContainer!.textContent = elementPath;
+
+    this.updateFeedItems(elementPath, buttonId);
+  }
+
+  private updateFeedItems(elementPath: string, mappingFieldName: string) {
+    console.log("SelectionMode is", this.state.selectionMode);
+    console.log("we are updating feed items for:", mappingFieldName);
+    console.log("element path:", elementPath);
+    const similarElements =
+      this.state.iframeDocument!.querySelectorAll(elementPath);
+    this.state.currentFeedItems = this.state.originalFeedItems.map(
+      (item, index) => {
+        return {
+          ...item,
+          [mappingFieldName]: similarElements[index]?.textContent?.trim() || "",
+        };
+      },
+    );
+
+    this.renderRssPreview();
+  }
+
+  private renderRssPreview() {
+    const feedItemsDiv = document.querySelector("#feedItems");
+    if (!feedItemsDiv) {
+      console.log("No feed items div found");
+      return;
+    }
+
+    // Clear existing content
+    feedItemsDiv.innerHTML = "";
+
+    this.state.currentFeedItems.forEach((feedItem) => {
+      const itemDiv = document.createElement("div");
+
+      const fields = {
+        title: feedItem.title,
+        author: feedItem.author,
+        date: feedItem.date,
+        link: feedItem.link,
+        description: feedItem.description,
+      };
+
+      for (const [fieldName, content] of Object.entries(fields)) {
+        const fieldElement = this.createFromTemplate("feedFields");
+        const nameElement = fieldElement.querySelector(".field-name");
+        const contentElement = fieldElement.querySelector(".field-content");
+
+        if (nameElement && contentElement) {
+          nameElement.textContent = fieldName;
+          contentElement.textContent = content;
+          itemDiv.appendChild(fieldElement);
+        }
+      }
+
+      feedItemsDiv.appendChild(itemDiv);
+    });
+  }
+
   private async handleUrlSubmit(e: SubmitEvent): Promise<void> {
     const form = e.target as HTMLFormElement;
     const input = form.querySelector("input")?.value as string;
@@ -160,7 +260,8 @@ export class RSSApp {
 
         if (analysisResult.success) {
           this.updateStatus("input");
-          this.state.feedItems = analysisResult.result.items;
+          this.state.originalFeedItems = this.state.currentFeedItems =
+            analysisResult.result.items;
           this.mountMappingTemplates(String(analysisResult.result.html));
         }
       } catch (err) {
@@ -175,21 +276,31 @@ export class RSSApp {
     const elementMappingClone = this.createFromTemplate("elementMapping");
     this.mappingContainer.appendChild(elementMappingClone);
 
+    // setup element selection buttons
+    const targetButtons = document.querySelectorAll(".target");
+    targetButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        console.log("button was clicked:", button.id);
+        this.toggleSelectionMode(button.id);
+      });
+    });
+
     // website preview
     const websitePreviewClone = this.createFromTemplate("websitePreview");
+    console.log("website preview clone", websitePreviewClone);
 
     const iframe = websitePreviewClone.querySelector(
       "#website-preview-iframe",
     ) as HTMLIFrameElement;
 
     if (iframe) {
+      console.log("iframe", iframe);
       // Inject <base> tag at the start of the <head> section
       const baseTag = `<base href="${this.state.currentUrl}">`;
       const modifiedHtml = html.replace(
         /<head>/i, // Find the <head> tag to insert the <base> tag after it
         `<head>${baseTag}`,
       );
-      this.mappingContainer.appendChild(websitePreviewClone);
       iframe.srcdoc = modifiedHtml;
       iframe.onload = () => {
         const iframeDocument: Document =
@@ -204,56 +315,37 @@ export class RSSApp {
       console.log("iframe element not found in the cloned template.");
     }
 
+    this.mappingContainer.appendChild(websitePreviewClone);
+
     // rss preview
     const rssPreviewClone = this.createFromTemplate("rssPreview");
-    const feedItemsDiv = rssPreviewClone.querySelector("#feedItems");
+    this.mappingContainer.appendChild(rssPreviewClone);
+
+    const feedItemsDiv = document.querySelector("#feedItems");
 
     if (!feedItemsDiv) {
       console.error("Feed items container not found in template");
       return;
     }
 
-    this.state.feedItems.forEach((feedItem) => {
-      const itemDiv = document.createElement("div");
-
-      const fields = {
-        title: feedItem.title.text,
-        author: feedItem.author.text,
-        date: feedItem.date.text,
-        url: feedItem.url.text,
-        description: feedItem.description.text,
-      };
-
-      for (const [fieldName, content] of Object.entries(fields)) {
-        const fieldElement = this.createFromTemplate("feedFields");
-        const nameElement = fieldElement.querySelector(".field-name");
-        const contentElement = fieldElement.querySelector(".field-content");
-
-        if (nameElement && contentElement) {
-          nameElement.textContent = fieldName;
-          contentElement.textContent = content || `No ${fieldName} found`;
-          itemDiv.appendChild(fieldElement);
-        }
-      }
-
-      feedItemsDiv.appendChild(itemDiv);
-    });
-
-    this.mappingContainer.appendChild(rssPreviewClone);
+    this.renderRssPreview();
 
     // add event listener to generate feed button
     const generateButton = document.getElementById("generate-feed");
-    generateButton?.addEventListener("click", async () => {
+    generateButton?.addEventListener("click", async (e) => {
+      e.preventDefault();
+
       const response = await fetch("/api/generate-feed", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          feedItems: this.state.feedItems,
+          feedItems: this.state.currentFeedItems,
           siteUrl: this.state.currentUrl,
         }),
       });
 
       const feedLink = await response.text();
+      console.log("feedlink", feedLink);
       const feedLinkElement = document.createElement("a");
       feedLinkElement.href = feedLink;
       feedLinkElement.textContent = "View RSS Feed";

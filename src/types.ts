@@ -3,9 +3,13 @@ import { FeedItem } from "../server/services/types";
 interface RSSState {
   status: "input" | "loading" | "error" | "mapping";
   currentUrl: string;
-  feedItems: FeedItem[];
   preview: string | null;
   iframeDocument: Document | null;
+  html: string;
+  originalFeedItems: FeedItem[];
+  currentFeedItems: FeedItem[];
+  selectionMode: boolean;
+  activeSelector: string;
 }
 
 interface Templates {
