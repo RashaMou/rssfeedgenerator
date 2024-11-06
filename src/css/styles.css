@@ -20,7 +20,7 @@ body {
   margin: 0 auto;
 }
 
-// HEADER
+/* HEADER */
 .header {
   text-align: center;
   padding: 1rem;
@@ -37,7 +37,7 @@ body {
   margin: 0;
 }
 
-// STATES
+/* STATES */
 .loading {
   text-align: center;
   margin-top: 2rem;
@@ -67,7 +67,7 @@ body {
   display: none;
 }
 
-// URL FORM
+/* URL FORM */
 .url-form {
   background: white;
   padding: 2rem;
@@ -106,7 +106,7 @@ input[type="url"]:focus {
   box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.2);
 }
 
-button#submit-button {
+button#submitButton {
   background: #4a90e2;
   color: white;
   border: none;
@@ -138,11 +138,11 @@ button:disabled {
   }
 }
 
-// MAPPING CONTAINER
+/* MAPPING CONTAINER */
 .rss-mapping-container {
   display: flex;
-  flex-grow: 1;
   overflow: hidden;
+  height: calc(100vh - 200px);
 }
 
 .element-mapping,
@@ -150,43 +150,63 @@ button:disabled {
   overflow-y: auto;
 }
 
-// ELEMENT MAPPER
-.field-container {
-  padding: 1rem;
+/* ELEMENT MAPPER */
+
+.element-mapping {
+  flex: 2;
+}
+
+.element-mapping-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1em;
+  padding: 0 1.1rem 0 1.2rem;
+}
+
+.mapping-item {
+  display: flex;
+  flex-direction: column;
+  /*align-items: center;*/
+  gap: 0.5em;
+}
+
+.mapping-item h3 {
+  margin: 0;
+  font-size: 1em;
 }
 
 .path-container {
   display: flex;
-  align-items: center;
+  gap: 1rem;
 }
 
-.element-path {
-  width: 100rem;
-  height: 40px;
-  padding: 0.75rem;
-  font-size: 1rem;
-  border: 1px solid #ddd;
+.path {
+  border: 1px solid #ccc;
+  padding: 0.5rem;
   border-radius: 4px;
+  background-color: #f9f9f9;
+  min-width: 20rem;
+  color: #666;
 }
 
-button.target {
-  background: none;
-  font-size: 1.7rem;
+.target {
+  padding-top: 3px;
+  cursor: pointer;
+  font-size: 1.2em;
+  user-select: none;
+  transition: transform 0.1s;
 }
 
-button.target:hover {
-  background-color: #357abd;
+.target:hover {
+  transform: scale(1.2);
 }
 
-// WEBISTE PREVIEW
+/* WEBISTE PREVIEW */
 .website-preview {
   height: 100vh;
   display: flex;
   flex-direction: column;
-  flex-grow: 3;
-  flex-shrink: 1;
-  flex-basis: 0;
-  overflow: hidden;
+  flex: 3;
 }
 
 .website-preview h2 {
@@ -199,10 +219,11 @@ button.target:hover {
   overflow: auto;
 }
 
-// RSS PREVIEW
+/* RSS PREVIEW */
 .rss-preview {
   display: flex;
   flex-direction: column;
+  flex: 2;
 
   #feedItems.content {
     overflow-y: auto;
@@ -220,7 +241,11 @@ button.target:hover {
   z-index: 1;
 }
 
-// HEADINGS
+button.generate-feed {
+  background-color: #357abd;
+}
+
+/* HEADINGS */
 h2 {
   font-size: 2rem;
   text-align: center;
