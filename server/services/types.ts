@@ -1,14 +1,9 @@
 interface FeedItem {
-  title: FeedItemProperty;
-  url: FeedItemProperty;
-  author: FeedItemProperty;
-  description: FeedItemProperty;
-  date: FeedItemProperty;
-}
-
-interface FeedItemProperty {
-  text: string;
-  html: string;
+  title: string;
+  link: string;
+  author: string;
+  description: string;
+  date: string;
 }
 
 interface AnalysisResult {
@@ -18,4 +13,4 @@ interface AnalysisResult {
   html: string;
 }
 
-export type { FeedItem, AnalysisResult, FeedItemProperty };
+export type { FeedItem, AnalysisResult };

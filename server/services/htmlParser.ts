@@ -1,5 +1,5 @@
 import * as cheerio from "cheerio";
-import { AnalysisResult, FeedItem, FeedItemProperty } from "./types";
+import { AnalysisResult, FeedItem } from "./types";
 
 export class HtmlParser {
   private logs: string[] = [];
@@ -198,13 +198,10 @@ export class HtmlParser {
 
         // extract text
         const titleElement = $article.find(titleSelectors.join(", "));
-        item.title = {
-          text: titleElement.text().trim() || "",
-          html: titleElement.prop("outerHTML") || "",
-        };
+        item.title = titleElement.text().trim();
 
         this.log(
-          `Article ${index} - Title found: ${item.title.text ? "Yes" : "No"}`,
+          `Article ${index} - Title found: ${item.title ? "Yes" : "No"}`,
         );
 
         // Extract URL: Look for the main link
@@ -212,11 +209,9 @@ export class HtmlParser {
           $article
             .find("h1 a[href], h2 a[href], h3 a[href], .title a[href]")
             .first() || $article.find("a[href]").first();
-        item.url = this.extractUrl($, mainLink);
+        item.link = this.extractUrl($, mainLink);
 
-        this.log(
-          `Article ${index} - URL found: ${item.url.text ? "Yes" : "No"}`,
-        );
+        this.log(`Article ${index} - URL found: ${item.link ? "Yes" : "No"}`);
 
         // Extract date: First look for adjacent time element, then fallback to within article
         let timeElement = $(article).prev("time");
@@ -228,7 +223,7 @@ export class HtmlParser {
         }
         item.date = this.extractDate($, timeElement);
         this.log(
-          `Article ${index} - Date found: ${item.date.text ? item.date.text : "No"}`,
+          `Article ${index} - Date found: ${item.date ? item.date : "No"}`,
         );
 
         // Extract author: Look for semantic author markers
@@ -240,12 +235,9 @@ export class HtmlParser {
         ];
 
         const authorElement = $article.find(authorSelectors.join(", "));
-        item.author = {
-          text: authorElement.text().trim() || "",
-          html: authorElement.prop("outerHTML") || "",
-        };
+        item.author = authorElement.text().trim();
         this.log(
-          `Article ${index} - Author found: ${item.author.text ? "Yes" : "No"}`,
+          `Article ${index} - Author found: ${item.author ? "Yes" : "No"}`,
         );
 
         // Extract content: Look for the main content area
@@ -260,17 +252,14 @@ export class HtmlParser {
           .first();
 
         // Clone and clean the content
-        item.description = {
-          text: contentElement.text().trim() || "",
-          html: contentElement.prop("outerHTML") || "",
-        };
+        item.description = contentElement.text().trim();
 
         this.log(
-          `Article ${index} - Content length: ${item.description.text.length} characters`,
+          `Article ${index} - Content length: ${item.description.length} characters`,
         );
 
         // Only add items that have at least a title and a url
-        if (item.title.text && item.url.text) {
+        if (item.title && item.link) {
           feedItems.push(item as FeedItem);
         } else {
           this.log(`Article ${index} - Skipped (no title or content)`);
@@ -299,35 +288,24 @@ export class HtmlParser {
     }
   }
 
-  private extractUrl(
-    $: cheerio.Root,
-    urlElement: cheerio.Cheerio,
-  ): FeedItemProperty {
+  private extractUrl($: cheerio.Root, urlElement: cheerio.Cheerio): string {
     const href =
       urlElement.attr("href") ||
       $('link[rel="canonical"]').attr("href") ||
       $('meta[property="og:url"]').attr("content");
 
-    if (!href) {
-      return { text: "", html: "" };
-    }
+    if (!href) return "";
 
     try {
-      return {
-        text: new URL(href, this.siteUrl).toString(),
-        html: urlElement.prop("outerHTML"),
-      };
+      return new URL(href, this.siteUrl).toString();
     } catch (e) {
       this.log(`Invalid URL: ${href}`);
-      return { text: "", html: "" };
+      return "";
     }
   }
 
-  private extractDate(
-    $: cheerio.Root,
-    element: cheerio.Cheerio,
-  ): FeedItemProperty {
-    if (element.length === 0) return { text: "", html: "" };
+  private extractDate($: cheerio.Root, element: cheerio.Cheerio): string {
+    if (element.length === 0) return "";
 
     // Try multiple date sources
     const dateStr =
@@ -338,13 +316,10 @@ export class HtmlParser {
 
     try {
       const parsed = new Date(dateStr);
-      return {
-        text: parsed.toUTCString().replace("GMT", "+0000"),
-        html: element.prop("outerHTML") || "",
-      };
+      return parsed.toUTCString().replace("GMT", "+0000");
     } catch (e) {
       this.log(`Invalid date: ${dateStr}`);
-      return { text: "", html: "" };
+      return "";
     }
   }
 
@@ -465,31 +440,17 @@ ${sampleContent}`;
           const absoluteUrl = rawUrl ? this.getFullUrl(rawUrl) : "";
 
           const item: FeedItem = {
-            title: {
-              text: $item.find(llmSuggestions.selectors.title).text().trim(),
-              html: $item.find(llmSuggestions.selectors.title).html() || "",
-            },
-            url: {
-              text: absoluteUrl,
-              html:
-                $item.find(llmSuggestions.selectors.link).prop("outerHTML") ||
-                "",
-            },
-            date: {
-              text: $item.find(llmSuggestions.selectors.date).text().trim(),
-              html: $item.find(llmSuggestions.selectors.date).html() || "",
-            },
-            author: {
-              text: $item.find(llmSuggestions.selectors.author).text().trim(),
-              html: $item.find(llmSuggestions.selectors.author).html() || "",
-            },
-            description: {
-              text: $item.find(llmSuggestions.selectors.content).text().trim(),
-              html: $item.find(llmSuggestions.selectors.content).html() || "",
-            },
+            title: $item.find(llmSuggestions.selectors.title).text().trim(),
+            link: absoluteUrl,
+            date: $item.find(llmSuggestions.selectors.date).text().trim(),
+            author: $item.find(llmSuggestions.selectors.author).text().trim(),
+            description: $item
+              .find(llmSuggestions.selectors.content)
+              .text()
+              .trim(),
           };
 
-          if (item.title.text && item.url.text) {
+          if (item.title && item.link) {
             items.push(item);
           }
         });

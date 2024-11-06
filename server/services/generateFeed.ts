@@ -17,16 +17,16 @@ const generateFeed = (feedItems: FeedItem[], siteUrl: string) => {
 
   feedItems.forEach((item) => {
     feed.addItem({
-      title: item.title.text,
-      id: item.url.text,
-      link: item.url.text,
-      description: item.description.text,
+      title: item.title,
+      id: item.link,
+      link: item.link,
+      description: item.description,
       author: [
         {
-          name: item.author.text,
+          name: item.author,
         },
       ],
-      date: new Date(item.date.text),
+      date: new Date(item.date),
     });
   });
 
