@@ -1,7 +1,7 @@
 import { FeedItem } from "../server/services/types";
 
 interface RSSState {
-  status: "input" | "loading" | "error" | "mapping";
+  status: "loading" | "error" | "";
   currentUrl: string;
   preview: string | null;
   iframeDocument: Document | null;
@@ -17,6 +17,7 @@ interface Templates {
   elementMapping: HTMLTemplateElement;
   rssPreview: HTMLTemplateElement;
   feedFields: HTMLTemplateElement;
+  inputForm: HTMLTemplateElement;
 }
 
 interface RSSMappings {

@@ -15,23 +15,7 @@
         <p>Enter a website URL to start creating your custom RSS feed</p>
       </div>
 
-      <!-- Input section -->
-      <div class="input-section">
-        <form id="urlForm" class="url-form">
-          <div class="form-group">
-            <label for="url">Website URL</label>
-            <input
-              type="text"
-              id="url"
-              name="url"
-              placeholder="Enter URL"
-              required
-            />
-            <div id="validationMessage" class="validation-message"></div>
-          </div>
-          <button type="submit" id="submitButton">Analyze website</button>
-        </form>
-      </div>
+      <div id="content"></div>
 
       <!-- Loading state -->
       <div id="loading" class="loading hidden">
@@ -47,7 +31,6 @@
             stroke-linecap="round"
           />
         </svg>
-        Analyzing website structure...
       </div>
 
       <!-- Error state -->
@@ -62,6 +45,23 @@
       ></div>
 
       <!-- Templates -->
+      <template id="input-template" class="input-section">
+        <form id="urlForm" class="url-form">
+          <div class="form-group">
+            <label for="url">Website URL</label>
+            <input
+              type="text"
+              id="url"
+              name="url"
+              placeholder="Enter URL"
+              required
+            />
+            <div id="validationMessage" class="validation-message"></div>
+          </div>
+          <button type="submit" id="submitButton">Analyze website</button>
+        </form>
+      </template>
+
       <template id="website-preview-template">
         <div class="card website-preview">
           <h2>Website Preview</h2>
@@ -136,10 +136,10 @@
       <template id="rss-preview-template">
         <div class="card rss-preview">
           <h2>RSS Preview</h2>
+          <button id="generate-feed">Generate Feed</button>
           <div id="feedItems" class="rss-content">
             <!-- feed-field-template goes here-->
           </div>
-          <button id="generate-feed">Generate Feed</button>
         </div>
       </template>
     </div>
