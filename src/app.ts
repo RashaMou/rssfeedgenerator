@@ -280,29 +280,40 @@ export class RSSApp {
   };
 
   private validateUrl(url: string): boolean {
-    let isValid = false;
-
     const validationMessageElement = document.getElementById(
       "validationMessage",
     ) as HTMLElement;
 
     try {
-      // check basic format
-      new URL(url);
+      // Check if URL is empty or just whitespace
+      if (!url.trim()) {
+        validationMessageElement.textContent = "URL cannot be empty";
+        return false;
+      }
 
-      // check domain existence
+      // Create URL object to validate format
+      const urlObject = new URL(url);
 
-      // check length
+      // Check protocol
+      if (!["http:", "https:"].includes(urlObject.protocol)) {
+        validationMessageElement.textContent =
+          "URL must use http or https protocol";
+        return false;
+      }
 
-      // check content-type or response
-      isValid = true;
+      // Check if has valid domain
+      if (!urlObject.hostname) {
+        validationMessageElement.textContent = "URL must have a valid domain";
+        return false;
+      }
+
       validationMessageElement.textContent = "";
-    } catch {
-      validationMessageElement.textContent =
-        "Please enter a valid URL, including https://";
+      return true;
+    } catch (error) {
+      validationMessageElement.textContent = "Please enter a valid URL";
     }
 
-    return isValid;
+    return true;
   }
 
   private toggleSelectionMode(buttonId: string): void {
