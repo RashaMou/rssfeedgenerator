@@ -1,7 +1,7 @@
 import { Feed } from "feed";
 import { v4 as uuid } from "uuid";
-import { FeedItem } from "./types";
-import config from "../config";
+import { FeedItem } from "./types.js";
+import config from "../config.js";
 
 const generateFeed = (feedItems: FeedItem[], siteUrl: string) => {
   const feedId = uuid();

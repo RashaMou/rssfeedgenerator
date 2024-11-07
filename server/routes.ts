@@ -1,6 +1,9 @@
 import express, { Request, Response, NextFunction } from "express";
-import { HtmlParser } from "./services/htmlParser";
-import generateFeed from "./services/generateFeed";
+import { HtmlParser } from "./services/htmlParser.js";
+import generateFeed from "./services/generateFeed.js";
+import { AnalysisResult } from "./services/types.js";
+import logger from "./logger.js";
+import config from "./config.js";
 
 const router = express.Router();
 const feedStore = new Map();
@@ -19,12 +22,30 @@ const asyncHandler =
 router.get(
   "/analyze/:url",
   asyncHandler(async (req: Request, res: Response) => {
+    console.log({
+      NODE_ENV: process.env.NODE_ENV,
+      configEnv: config.env,
+      URL_PARAM: req.params.url,
+      DECODED: decodeURIComponent(req.params.url),
+      HEADERS: req.headers,
+    });
+
     const decodedUrl = decodeURIComponent(req.params.url);
+    logger.info("got url to analyze:", decodedUrl);
 
-    const feedAnalyzer = new HtmlParser(decodedUrl);
+    let result: AnalysisResult | null;
 
-    const result = await feedAnalyzer.analyze();
-    res.json({ success: true, result });
+    try {
+      const feedAnalyzer = new HtmlParser(decodedUrl);
+      result = await feedAnalyzer.analyze();
+      res.json({ success: true, result });
+    } catch (err) {
+      logger.error("Error analyzing URL", { url: decodedUrl, error: err });
+      res
+        .status(500)
+        .json({ success: false, message: "Failed to analyze the URL" });
+      return;
+    }
   }),
 );
 
@@ -38,9 +59,7 @@ router.post(
 
     const feedUrl = new URL(
       `/api/feed/${feedId}.xml`,
-      process.env.NODE_ENV === "production"
-        ? "https://rasha.dev/feedatron"
-        : "http://localhost:3000",
+      config.env === "production" ? config.baseUrl : "http://localhost:3000",
     ).toString();
 
     res.send(feedUrl);
@@ -63,9 +82,20 @@ router.get(
   }),
 );
 
+router.get(
+  "/test-analyze:url",
+  asyncHandler(async (req: Request, res: Response) => {
+    const decodedUrl = decodeURIComponent(req.params.url);
+    res.json({
+      received: decodedUrl,
+      encoded: req.params.url,
+    });
+  }),
+);
+
 // Global error handler
-router.use((err: Error, req: Request, res: Response, next: NextFunction) => {
-  console.error(err.stack);
+router.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+  logger.error(err.stack);
   res.status(500).json({
     success: false,
     error:

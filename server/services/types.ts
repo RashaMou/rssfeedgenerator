@@ -9,7 +9,6 @@ interface FeedItem {
 interface AnalysisResult {
   items: FeedItem[];
   source?: string;
-  logs: string[];
   html: string;
 }
 

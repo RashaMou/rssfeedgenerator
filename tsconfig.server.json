@@ -1,13 +1,36 @@
-// tsconfig.server.json
+// {
+//   "compilerOptions": {
+//     "target": "ES2020",
+//     "module": "NodeNext",
+//     "moduleResolution": "NodeNext",
+//     "paths": { "@/*": ["server/*"] },
+//     "esModuleInterop": true,
+//     "strict": true,
+//     "outDir": "./dist/server",
+//     "sourceMap": true,
+//     "skipLibCheck": true,
+//     "forceConsistentCasingInFileNames": true,
+//     "resolveJsonModule": true,
+//     "noUnusedLocals": true,
+//     "noUnusedParameters": true,
+//     "allowSyntheticDefaultImports": true,
+//     "baseUrl": "."
+//   },
+//   "include": ["server/**/*"],
+//   "exclude": ["node_modules", "dist"]
+// }
+
 {
   "compilerOptions": {
-    "target": "ES2015",
+    "target": "ES2020",
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
-    "paths": { "@/*": ["server/*"] },
+    "outDir": "./dist/server",
     "esModuleInterop": true,
+    "skipLibCheck": true,
     "strict": true,
-    "outDir": "./dist"
+    "baseUrl": "."
   },
-  "include": ["server/**/*"]
+  "include": ["server/**/*"],
+  "exclude": ["node_modules", "dist"]
 }

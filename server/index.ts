@@ -1,8 +1,9 @@
 import cors from "cors";
 import express, { Express, Request, Response, NextFunction } from "express";
-import routes from "./routes.ts";
+import routes from "./routes.js";
 import dotenv from "dotenv";
-import config from "./config.ts";
+import config from "./config.js";
+import logger from "./logger.js";
 
 dotenv.config();
 
@@ -10,7 +11,7 @@ const app: Express = express();
 const port: number = parseInt(process.env.PORT || "8080", 10);
 
 // Security headers
-app.use((req: Request, res: Response, next: NextFunction) => {
+app.use((_req: Request, res: Response, next: NextFunction) => {
   res.setHeader("X-Content-Type-Options", "nosniff");
   res.setHeader("X-Frame-Options", "DENY");
   res.setHeader("X-XSS-Protection", "1; mode=block");
@@ -32,7 +33,7 @@ app.use(express.json({ limit: "1mb" }));
 app.use("/api", routes);
 
 // 404 handler
-app.use((req: Request, res: Response) => {
+app.use((_: Request, res: Response) => {
   res.status(404).json({
     success: false,
     error: "Not found",
@@ -40,8 +41,8 @@ app.use((req: Request, res: Response) => {
 });
 
 // Error handler
-app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
-  console.error(err.stack);
+app.use((err: Error, _: Request, res: Response, _next: NextFunction) => {
+  logger.error(err.stack);
   res.status(500).json({
     success: false,
     error:
@@ -51,8 +52,6 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
   });
 });
 
-if (require.main === module) {
-  app.listen(port, () => {
-    console.log(`Server running on ${config.baseUrl}:${config.port}`);
-  });
-}
+app.listen(port, () => {
+  logger.info(`Server running on ${config.baseUrl}:${config.port}`);
+});

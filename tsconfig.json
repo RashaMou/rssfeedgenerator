@@ -1,29 +1,53 @@
+// {
+//   "compilerOptions": {
+//     "target": "ES2015",
+//     "useDefineForClassFields": true,
+//     "module": "ES2015",
+//     "lib": ["ES2015", "DOM", "DOM.Iterable", "ESNext"],
+//     "allowSyntheticDefaultImports": true,
+//     "esModuleInterop": true,
+//     "skipLibCheck": true,
+//     "sourceMap": true,
+//     "baseUrl": ".",
+//     "paths": {
+//       "@/*": ["src/*"]
+//     },
+//
+//     /* Bundler mode */
+//     "moduleResolution": "bundler",
+//     "allowImportingTsExtensions": true,
+//     "resolveJsonModule": true,
+//     "isolatedModules": true,
+//     "noEmit": true,
+//
+//     /* Type checking */
+//     "strict": true,
+//     "noImplicitAny": true,
+//     "strictPropertyInitialization": true,
+//
+//     "noUnusedLocals": true,
+//     "noUnusedParameters": true
+//   },
+//   "include": ["src/**/*", "tests/**/*"],
+//   "exclude": ["node_modules", "dist"]
+// }
+//
 {
   "compilerOptions": {
-    "target": "ES2015",
-    "useDefineForClassFields": true,
-    "module": "ES2015",
-    "lib": ["ES2015", "DOM", "DOM.Iterable"],
+    "target": "ES2020",
+    "module": "ESNext",
+    "lib": ["DOM", "DOM.Iterable", "ESNext"],
+    "moduleResolution": "bundler",
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "sourceMap": true,
+    "noEmit": true,
+    "strict": true,
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"]
-    },
-
-    /* Bundler mode */
-    "moduleResolution": "bundler",
-    "allowImportingTsExtensions": true,
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "noEmit": true,
-
-    /* Type checking */
-    "strict": true,
-    "noImplicitAny": true,
-    "strictPropertyInitialization": true
+    }
   },
-  "include": ["src/**/*", "tests/**/*"]
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
 }

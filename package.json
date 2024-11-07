@@ -1,35 +1,50 @@
 {
+  "name": "feedatron",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && tsc -p tsconfig.server.json",
+    "start": "node dist/server/index.js",
     "preview": "vite preview",
     "server": "tsx server/index.ts",
     "test": "vitest",
     "test:ui": "vitest --ui",
-    "test:run": "vitest run"
+    "test:run": "vitest run",
+    "lint": "eslint . --ext .ts,.tsx",
+    "format": "prettier --write \"**/*.{ts,tsx,json,md}\""
   },
   "devDependencies": {
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.6.3",
-    "@types/cheerio": "^0.22.35",
-    "@types/cors": "^2.8.17",
-    "@types/express": "^5.0.0",
     "@types/jsdom": "^21.1.7",
-    "@types/node": "^22.8.4",
+    "@typescript-eslint/eslint-plugin": "^7.1.0",
+    "@typescript-eslint/parser": "^7.1.0",
+    "eslint": "^8.57.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-import": "^2.29.1",
     "jsdom": "^25.0.1",
-    "tsx": "^4.19.2",
+    "prettier": "^3.2.5",
+    "terser": "^5.36.0",
     "typescript": "^5.6.3",
-    "vite": "^5.4.10",
     "vitest": "^2.1.4"
   },
   "dependencies": {
+    "@types/node": "^22.8.4",
+    "@types/cheerio": "^0.22.35",
+    "@types/express": "^5.0.0",
+    "@types/cors": "^2.8.17",
+    "vite": "^5.4.10",
+    "tsx": "^4.19.2",
     "cheerio": "^1.0.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.21.1",
     "fast-xml-parser": "^4.5.0",
     "feed": "^4.2.2",
-    "uuid": "^11.0.2"
+    "uuid": "^11.0.2",
+    "winston": "^3.16.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }

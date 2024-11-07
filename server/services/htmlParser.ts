@@ -1,15 +1,11 @@
 import * as cheerio from "cheerio";
-import { AnalysisResult, FeedItem } from "./types";
-import config from "../config";
+import { AnalysisResult, FeedItem } from "./types.js";
+import config from "../config.js";
+import logger from "../logger.js";
 
 export class HtmlParser {
-  private logs: string[] = [];
   private siteUrl: string;
   private html: string;
-
-  private log(message: string): void {
-    this.logs.push(`[FeedAnalyzer] ${message}`);
-  }
 
   constructor(siteUrl: string) {
     this.siteUrl = siteUrl;
@@ -46,7 +42,7 @@ export class HtmlParser {
       this.html = sanitizedHtml;
       return $ToParse;
     } catch (error) {
-      this.log(`Error fetching HTML: ${error}`);
+      logger.error(`Error fetching HTML: ${error}`);
       throw error;
     }
   }
@@ -145,15 +141,13 @@ export class HtmlParser {
   private async trySemanticAnalysis(
     $: cheerio.Root,
   ): Promise<AnalysisResult | null> {
-    this.log("Attempting semantic analysis...");
+    logger.info("Attempting semantic analysis...");
 
     try {
       let articles = $("article");
-      this.log(`Found ${articles.length} article elements`);
 
       if (articles.length === 0) {
         const mainContent = $("main");
-        this.log(`No article elements found, checking main element...`);
         if (mainContent.length) {
           const primarySelectors = [
             "article",
@@ -170,19 +164,16 @@ export class HtmlParser {
           ].join(", ");
 
           articles = mainContent.find(primarySelectors);
-          this.log(`Found ${articles.length} section elements within main`);
         }
       }
 
       if (articles.length === 0) {
-        this.log("No semantic article or section elements found");
         return null;
       }
 
       const feedItems: FeedItem[] = [];
 
-      articles.each((index, article) => {
-        this.log(`Processing article ${index}/${articles.length}`);
+      articles.each((_, article) => {
         const $article = $(article);
         const item: Partial<FeedItem> = {};
 
@@ -201,18 +192,12 @@ export class HtmlParser {
         const titleElement = $article.find(titleSelectors.join(", "));
         item.title = titleElement.text().trim();
 
-        this.log(
-          `Article ${index} - Title found: ${item.title ? "Yes" : "No"}`,
-        );
-
         // Extract URL: Look for the main link
         const mainLink =
           $article
             .find("h1 a[href], h2 a[href], h3 a[href], .title a[href]")
             .first() || $article.find("a[href]").first();
         item.link = this.extractUrl($, mainLink);
-
-        this.log(`Article ${index} - URL found: ${item.link ? "Yes" : "No"}`);
 
         // Extract date: First look for adjacent time element, then fallback to within article
         let timeElement = $(article).prev("time");
@@ -223,9 +208,6 @@ export class HtmlParser {
             .first();
         }
         item.date = this.extractDate($, timeElement);
-        this.log(
-          `Article ${index} - Date found: ${item.date ? item.date : "No"}`,
-        );
 
         // Extract author: Look for semantic author markers
         const authorSelectors = [
@@ -237,9 +219,6 @@ export class HtmlParser {
 
         const authorElement = $article.find(authorSelectors.join(", "));
         item.author = authorElement.text().trim();
-        this.log(
-          `Article ${index} - Author found: ${item.author ? "Yes" : "No"}`,
-        );
 
         // Extract content: Look for the main content area
         const contentSelectors = [
@@ -255,36 +234,29 @@ export class HtmlParser {
         // Clone and clean the content
         item.description = contentElement.text().trim();
 
-        this.log(
-          `Article ${index} - Content length: ${item.description.length} characters`,
-        );
-
         // Only add items that have at least a title and a url
         if (item.title && item.link) {
           feedItems.push(item as FeedItem);
-        } else {
-          this.log(`Article ${index} - Skipped (no title or content)`);
         }
       });
 
       if (feedItems.length > 0) {
-        this.log(
+        logger.info(
           `Semantic analysis complete - Found ${feedItems.length} valid feed items`,
         );
 
         return {
           items: feedItems,
           source: "semantic-analysis",
-          logs: this.logs,
           html: this.html,
         };
       }
 
-      this.log("Semantic analysis complete - No valid feed items found");
+      logger.info("Semantic analysis complete - No valid feed items found");
 
       return null;
     } catch (error) {
-      this.log(`Error in semantic analysis: ${error}`);
+      logger.error(`Error in semantic analysis: ${error}`);
       return null;
     }
   }
@@ -300,7 +272,7 @@ export class HtmlParser {
     try {
       return new URL(href, this.siteUrl).toString();
     } catch (e) {
-      this.log(`Invalid URL: ${href}`);
+      logger.error(`Extracted url is invalid: ${href}`);
       return "";
     }
   }
@@ -319,7 +291,7 @@ export class HtmlParser {
       const parsed = new Date(dateStr);
       return parsed.toUTCString().replace("GMT", "+0000");
     } catch (e) {
-      this.log(`Invalid date: ${dateStr}`);
+      logger.error(`Extracted date is invalid: ${dateStr}`);
       return "";
     }
   }
@@ -335,7 +307,7 @@ export class HtmlParser {
   private async requestLlmAssistance(
     $: cheerio.Root,
   ): Promise<AnalysisResult | null> {
-    this.log("Attempting GPT-3.5 Turbo analysis...");
+    logger.info("Attempting GPT-3.5 Turbo analysis...");
 
     try {
       // Clone body and clean it
@@ -427,7 +399,7 @@ ${sampleContent}`;
         const llmSuggestions = JSON.parse(llmResponse);
 
         if (llmSuggestions.confidence < 0.6) {
-          this.log("GPT confidence too low, skipping results");
+          logger.info("GPT confidence too low, skipping results");
           return null;
         }
 
@@ -460,23 +432,21 @@ ${sampleContent}`;
           return {
             items,
             source: "gpt-analysis",
-            logs: this.logs,
             html: this.html,
           };
         }
       } catch (error) {
-        this.log(`Error parsing GPT response: ${error}`);
+        logger.error(`Error parsing GPT response: ${error}`);
       }
 
       return null;
     } catch (error) {
-      this.log(`GPT analysis failed: ${error}`);
+      logger.error(`GPT analysis failed: ${error}`);
       return null;
     }
   }
 
   public async analyze(): Promise<AnalysisResult | null> {
-    this.logs = [];
     try {
       const $ = await this.extractHtml(this.siteUrl);
 
@@ -484,18 +454,16 @@ ${sampleContent}`;
         (await this.trySemanticAnalysis($)) || this.requestLlmAssistance($);
 
       if (result) {
-        console.log("Parsing logs");
         return result;
       }
 
       return {
         items: [],
-        logs: this.logs,
         html: "",
       };
     } catch (error) {
-      this.log(`Analysis failed: ${error}`);
-      return { items: [], logs: this.logs, html: "" };
+      logger.error(`Analysis failed: ${error}`);
+      return { items: [], html: "" };
     }
   }
 }

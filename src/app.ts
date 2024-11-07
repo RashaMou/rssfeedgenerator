@@ -441,6 +441,7 @@ export class RSSApp {
     this.updateStatus("loading");
 
     try {
+      console.log("we're analyzing");
       // Step 1: Analyze Website Structure
       await this.updateLoadingMessage(this.loadingSteps[0]);
 
