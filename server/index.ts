@@ -1,4 +1,5 @@
 import cors from "cors";
+import { join } from "path";
 import express, { Express, Request, Response, NextFunction } from "express";
 import routes from "./routes.js";
 import dotenv from "dotenv";
@@ -17,6 +18,9 @@ app.use((_req: Request, res: Response, next: NextFunction) => {
   res.setHeader("X-XSS-Protection", "1; mode=block");
   next();
 });
+
+// Serve frontend static files from the "dist/client" directory
+app.use(express.static(join(process.cwd(), "dist/client")));
 
 // Middleware
 app.use(
