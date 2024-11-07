@@ -11,7 +11,14 @@
   <body>
     <div class="container">
       <div class="header">
-        <h1>RSS Feed Creator</h1>
+        <div class="logo-container">
+          <img
+            src="/src/assets/images/feedatron-logo.png"
+            class="logo"
+            alt="feedatron logo"
+          />
+          <h1>The Feed-a-tron</h1>
+        </div>
         <p>Enter a website URL to start creating your custom RSS feed</p>
       </div>
 
@@ -38,7 +45,7 @@
             cy="12"
             r="10"
             fill="none"
-            stroke="#4A90E2"
+            stroke="#d94725"
             stroke-width="3"
             stroke-dasharray="32"
             stroke-linecap="round"
@@ -58,7 +65,6 @@
       <template id="input-template" class="input-section">
         <form id="urlForm" class="url-form">
           <div class="form-group">
-            <label for="url">Website URL</label>
             <input
               type="text"
               id="url"
