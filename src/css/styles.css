@@ -27,7 +27,6 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  overflow: hidden;
 }
 
 /* Header styles */
@@ -70,8 +69,9 @@ h3 {
 
 .rss-mapping-container {
   display: flex;
-  height: 1000px;
+  height: 800px;
   gap: 1rem;
+  margin-bottom: 4rem;
 }
 
 /* Card styles */
@@ -139,6 +139,8 @@ button:hover {
 .element-mapping {
   flex: 1;
   width: 100%;
+  overflow-y: auto;
+  height: 100%;
 }
 
 .element-mapping-container {
@@ -290,13 +292,13 @@ dialog {
   justify-content: center;
   outline: none;
   line-height: 1;
-  width: 32px; /* Set fixed dimensions */
+  width: 32px;
   height: 32px;
-  border-radius: 4px; /* Optional: for rounded corners */
+  border-radius: 4px;
 }
 
 .close-btn:hover {
-  background-color: rgba(0, 0, 0, 0.05); /* Subtle hover effect */
+  background-color: rgba(0, 0, 0, 0.05);
 }
 
 /* Responsive design */
