@@ -36,6 +36,12 @@ export class RSSApp {
   }
 
   private init(): void {
+    // Go back to "/" on reload
+    if (window.location.pathname !== "/") {
+      window.location.href = "/";
+      return;
+    }
+
     // Initialize DOM elements
     const errorElement = document.getElementById("error") as HTMLElement;
     const loadingElement = document.getElementById("loading") as HTMLElement;
