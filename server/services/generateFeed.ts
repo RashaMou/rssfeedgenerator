@@ -1,6 +1,7 @@
 import { Feed } from "feed";
 import { v4 as uuid } from "uuid";
 import { FeedItem } from "./types";
+import config from "../config";
 
 const generateFeed = (feedItems: FeedItem[], siteUrl: string) => {
   const feedId = uuid();
@@ -9,10 +10,10 @@ const generateFeed = (feedItems: FeedItem[], siteUrl: string) => {
   const feed = new Feed({
     title: siteName,
     id: feedId,
-    link: `http://localhost:3000/feed/${siteName}.xml`,
+    link: `${config.baseUrl}/feed/${siteName}.xml`,
     copyright: "",
     feedLinks: {
-      json: "https://example.com/json",
+      json: `${config.baseUrl}/feed/${siteName}.json`,
     },
   });
 
