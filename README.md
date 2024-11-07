@@ -1,22 +1,23 @@
-# Site to RSS feed
+# Feed-a-tron
 
-The goal of the project is the create a simple Website to RSS feed service.
+This project aims to create a web application that transforms website content
+into RSS feeds. Users can manage their feeds with functionalities to add, edit,
+and delete RSS sources. The application attempts to auto-generate RSS feeds by
+analyzing website structures. If auto-generation fails, users can manually
+select elements from the website's interface.
 
-Create a web app where a user can manage (add/edit/delete) site feeds.
+## Features
 
-Pay attention to the feed creation UX and make it as easy as possible for the
-user to create a feed.
+- Feed Management: Add, edit, and delete website feeds.
+- Automatic Feed Generation: Attempts to detect relevant elements (title, URL,
+  content, date, author) automatically.
+- Manual Feed Mapping: Interactive UI for users to manually map elements if
+  automatic parsing fails.
+- Real-Time Preview: Shows a live preview of the feed as users modify feed
+  mappings.
 
-Once the user adds a website URL, you will try yo automatically analyze a
-website and build the RSS feed. Using an LLM for this task is allowed.
+## Tech Stack
 
-If that succeeds, show the RSS Feed and the mapping of on-page elements that
-were used to map to relevant feed values (title, url, content, date, author).
-User should be able to edit these and see changes in real time.
-
-If this fails, show the website in an interface where the user can point and
-click to select elements.
-
-The acceptance criteria is that the user can visit the service, and create feeds
-for websites in an intuitive and as simple as possible manner.
-
+- Frontend: TypeScript, HTML, CSS
+- Backend: Node.js and Express
+- Deployment: Hosted on feedatron.onrender.com
