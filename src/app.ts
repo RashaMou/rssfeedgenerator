@@ -326,10 +326,21 @@ export class RSSApp {
   private handleElementClick(event: Event, buttonId: string): void {
     event.preventDefault();
 
-    const selectedElement = event.target as HTMLElement;
+    let selectedElement = event.target as HTMLElement;
+
+    // If we're looking for a link, make sure we get the <a> element
+    if (buttonId === "Link") {
+      // Find closest anchor tag if we clicked inside one
+      const anchorElement = selectedElement.closest("a");
+      if (anchorElement) {
+        selectedElement = anchorElement;
+      }
+    }
+
     const elementPath = getElementPath(selectedElement);
 
     const pathTextContainer = document.getElementById(`${buttonId}-path`);
+
     pathTextContainer!.textContent = elementPath;
 
     this.updateFeedItems(elementPath, buttonId);
@@ -338,15 +349,31 @@ export class RSSApp {
   private updateFeedItems(elementPath: string, mappingFieldName: string) {
     const similarElements =
       this.state.iframeDocument!.querySelectorAll(elementPath);
+
     this.state.currentFeedItems = this.state.originalFeedItems.map(
       (item, index) => {
+        const element = similarElements[index];
+        let value = "";
+
+        if (element) {
+          if (mappingFieldName === "link") {
+            // For links, prefer data-href, fallback to href
+            value =
+              element.getAttribute("data-href") ||
+              element.getAttribute("href") ||
+              "";
+          } else {
+            // For other fields, use text content
+            value = element.textContent?.trim() || "";
+          }
+        }
+
         return {
           ...item,
-          [mappingFieldName]: similarElements[index]?.textContent?.trim() || "",
+          [mappingFieldName]: value,
         };
       },
     );
-
     this.renderRssPreview();
   }
 
@@ -447,11 +474,11 @@ export class RSSApp {
   // Fade in/out effect between loading messages
   private async fadeInOutEffect(): Promise<void> {
     this.loadingMessageElement.classList.add("active");
-    await new Promise((resolve) => setTimeout(resolve, 300)); // Brief pause for fade-in
+    await new Promise((resolve) => setTimeout(resolve, 300));
 
     // Wait before fading out
     this.loadingMessageElement.classList.remove("active");
-    await new Promise((resolve) => setTimeout(resolve, 300)); // Brief pause for fade-out
+    await new Promise((resolve) => setTimeout(resolve, 300));
   }
 
   private hasDirectText(element: Element): boolean {
