@@ -1,0 +1,13 @@
+// tsconfig.server.json
+{
+  "compilerOptions": {
+    "target": "ES2015",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "paths": { "@/*": ["server/*"] },
+    "esModuleInterop": true,
+    "strict": true,
+    "outDir": "./dist"
+  },
+  "include": ["server/**/*"]
+}

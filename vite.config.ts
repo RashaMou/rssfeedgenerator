@@ -1,5 +1,6 @@
 import { defineConfig } from "vite";
 import { resolve } from "path";
+import { configDefaults } from "vitest/config";
 
 export default defineConfig({
   server: {
@@ -17,6 +18,15 @@ export default defineConfig({
     sourcemap: true,
   },
   resolve: {
+    alias: {
+      "@": resolve(__dirname, "./src"),
+    },
+  },
+  test: {
+    ...configDefaults,
+    environment: "jsdom",
+    globals: true,
+    setupFiles: ["./tests/frontend/setup.ts"],
     alias: {
       "@": resolve(__dirname, "./src"),
     },

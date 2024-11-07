@@ -4,6 +4,8 @@
     "useDefineForClassFields": true,
     "module": "ES2015",
     "lib": ["ES2015", "DOM", "DOM.Iterable"],
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
     "skipLibCheck": true,
     "sourceMap": true,
     "baseUrl": ".",
@@ -23,5 +25,5 @@
     "noImplicitAny": true,
     "strictPropertyInitialization": true
   },
-  "include": ["src"]
+  "include": ["src/**/*", "tests/**/*"]
 }
