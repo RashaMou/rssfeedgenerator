@@ -22,14 +22,6 @@ const asyncHandler =
 router.get(
   "/analyze/:url",
   asyncHandler(async (req: Request, res: Response) => {
-    console.log({
-      NODE_ENV: process.env.NODE_ENV,
-      configEnv: config.env,
-      URL_PARAM: req.params.url,
-      DECODED: decodeURIComponent(req.params.url),
-      HEADERS: req.headers,
-    });
-
     const decodedUrl = decodeURIComponent(req.params.url);
     logger.info("got url to analyze:", decodedUrl);
 
@@ -38,13 +30,33 @@ router.get(
     try {
       const feedAnalyzer = new HtmlParser(decodedUrl);
       result = await feedAnalyzer.analyze();
+
+      if (result && result.error) {
+        // Send error response with appropriate status code
+        res.status(result.error.statusCode || 500).json({
+          success: false,
+          error: result.error.message,
+          result,
+        });
+        return;
+      }
+
       res.json({ success: true, result });
-    } catch (err) {
-      logger.error("Error analyzing URL", { url: decodedUrl, error: err });
-      res
-        .status(500)
-        .json({ success: false, message: "Failed to analyze the URL" });
-      return;
+    } catch (error) {
+      logger.error("Error analyzing URL", { url: decodedUrl, error: error });
+      res.status(500).json({
+        success: false,
+        error: "Failed to analyze URL",
+        result: {
+          items: [],
+          logs: [],
+          html: "",
+          error: {
+            message: error instanceof Error ? error.message : "Unknown error",
+            statusCode: 500,
+          },
+        },
+      });
     }
   }),
 );
@@ -83,13 +95,41 @@ router.get(
 );
 
 router.get(
-  "/test-analyze:url",
+  "/test-analyze/:url",
   asyncHandler(async (req: Request, res: Response) => {
     const decodedUrl = decodeURIComponent(req.params.url);
     res.json({
       received: decodedUrl,
       encoded: req.params.url,
     });
+  }),
+);
+
+router.get(
+  "/check-url/:url",
+  asyncHandler(async (req: Request, res: Response) => {
+    const decodedUrl = decodeURIComponent(req.params.url);
+
+    if (!decodedUrl) {
+      return res.status(400).json({ error: "URL parameter is required" });
+    }
+
+    try {
+      const response = await fetch(decodedUrl, {
+        method: "HEAD",
+        headers: {
+          "User-Agent": "Mozilla/5.0 (compatible; URL Validator/1.0;)",
+        },
+      });
+
+      if (response.ok) {
+        res.status(200).json({ status: "ok" });
+      } else {
+        res.status(404).json({ error: "Website not found" });
+      }
+    } catch (error) {
+      res.status(500).json({ error: "Unable to reach website" });
+    }
   }),
 );
 

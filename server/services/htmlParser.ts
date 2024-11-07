@@ -43,7 +43,11 @@ export class HtmlParser {
       return $ToParse;
     } catch (error) {
       logger.error(`Error fetching HTML: ${error}`);
-      throw error;
+      throw {
+        message:
+          error instanceof Error ? error.message : "Failed to fetch HTML",
+        statusCode: error instanceof Response ? error.status : 500,
+      };
     }
   }
 
@@ -463,7 +467,19 @@ ${sampleContent}`;
       };
     } catch (error) {
       logger.error(`Analysis failed: ${error}`);
-      return { items: [], html: "" };
+
+      const result: AnalysisResult = {
+        items: [],
+        html: "",
+        error: {
+          message: error instanceof Error ? error.message : "Analysis failed",
+          statusCode:
+            error && typeof error === "object" && "statusCode" in error
+              ? (error as { statusCode: number }).statusCode
+              : 500,
+        },
+      };
+      return result;
     }
   }
 }

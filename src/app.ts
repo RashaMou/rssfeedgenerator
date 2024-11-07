@@ -288,42 +288,86 @@ export class RSSApp {
     this.dialog.close();
   };
 
-  private validateUrl(url: string): boolean {
-    const validationMessageElement = document.getElementById(
-      "validationMessage",
-    ) as HTMLElement;
-
+  private async validateUrl(url: string): Promise<string> {
     try {
       // Check if URL is empty or just whitespace
       if (!url.trim()) {
-        validationMessageElement.textContent = "URL cannot be empty";
-        return false;
+        this.errorElement.textContent = "URL cannot be empty";
+        this.updateStatus("error");
+        return "";
       }
 
-      // Create URL object to validate format
-      const urlObject = new URL(url);
-
-      // Check protocol
-      if (!["http:", "https:"].includes(urlObject.protocol)) {
-        validationMessageElement.textContent =
-          "URL must use http or https protocol";
-        return false;
+      // Add https:// if no protocol is specified
+      let urlToCheck = url;
+      if (!url.startsWith("http://") && !url.startsWith("https://")) {
+        urlToCheck = `https://${url}`;
       }
 
-      // Check if has valid domain
-      if (!urlObject.hostname) {
-        validationMessageElement.textContent = "URL must have a valid domain";
-        return false;
+      // Check if website exists by making a HEAD request
+      try {
+        const response = await fetch(
+          `/api/check-url/${encodeURIComponent(urlToCheck)}`,
+          {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          },
+        );
+
+        if (!response.ok) {
+          this.errorElement.textContent =
+            "This website appears to be unavailable. Please check the URL and try again.";
+          this.updateStatus("error");
+          return "";
+        }
+      } catch (networkError) {
+        this.errorElement.textContent =
+          "Unable to reach this website. Please check the URL and try again.";
+        this.updateStatus("error");
+        return "";
       }
 
-      validationMessageElement.textContent = "";
-      return true;
+      return urlToCheck;
     } catch (error) {
-      validationMessageElement.textContent = "Please enter a valid URL";
+      this.errorElement.textContent = "Please enter a valid URL";
+      this.updateStatus("error");
+      return "";
     }
-
-    return true;
   }
+  // private validateUrl(url: string): boolean {
+  //   try {
+  //     // Check if URL is empty or just whitespace
+  //     if (!url.trim()) {
+  //       this.errorElement.textContent = "URL cannot be empty";
+  //       this.updateStatus("error");
+  //       return false;
+  //     }
+  //
+  //     // Create URL object to validate format
+  //     const urlObject = new URL(url);
+  //
+  //     // Check protocol
+  //     if (!["http:", "https:"].includes(urlObject.protocol)) {
+  //       this.errorElement.textContent = "URL must use http or https protocol";
+  //       this.updateStatus("error");
+  //       return false;
+  //     }
+  //
+  //     // Check if has valid domain
+  //     if (!urlObject.hostname) {
+  //       this.errorElement.textContent = "URL must have a valid domain";
+  //       this.updateStatus("error");
+  //       return false;
+  //     }
+  //
+  //     return true;
+  //   } catch (error) {
+  //     this.errorElement.textContent = "Please enter a valid URL";
+  //     this.updateStatus("error");
+  //     return false;
+  //   }
+  // }
 
   private toggleSelectionMode(buttonId: string): void {
     // if we don't already have an activeSelector
@@ -440,22 +484,26 @@ export class RSSApp {
   }
 
   private async handleUrlSubmit(e: SubmitEvent): Promise<void> {
+    this.state.currentUrl = "";
     const form = e.target as HTMLFormElement;
     const input = form.querySelector("input")?.value as string;
-    const isValid = this.validateUrl(input);
+    const validatedUrl = await this.validateUrl(input); // Add await here
 
-    if (!isValid) return;
+    if (!validatedUrl) {
+      this.updateStatus("error");
+      return;
+    }
 
-    this.state.currentUrl = input;
+    this.state.currentUrl = validatedUrl;
+
     this.updateStatus("loading");
 
     try {
-      console.log("we're analyzing");
       // Step 1: Analyze Website Structure
       await this.updateLoadingMessage(this.loadingSteps[0]);
 
       const response = await fetch(
-        `/api/analyze/${encodeURIComponent(input)}`,
+        `/api/analyze/${encodeURIComponent(this.state.currentUrl)}`,
         {
           method: "GET",
           headers: {
@@ -469,6 +517,12 @@ export class RSSApp {
       }
 
       const analysisResult = await response.json();
+
+      if (analysisResult.error) {
+        this.updateStatus("error");
+        this.errorElement.textContent = analysisResult.error.message;
+        return;
+      }
 
       // Step 2: Generate Preview
       await this.updateLoadingMessage(this.loadingSteps[1]);

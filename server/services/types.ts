@@ -10,6 +10,10 @@ interface AnalysisResult {
   items: FeedItem[];
   source?: string;
   html: string;
+  error?: {
+    message: string;
+    statusCode?: number;
+  };
 }
 
 export type { FeedItem, AnalysisResult };
