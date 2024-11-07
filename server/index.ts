@@ -2,6 +2,7 @@ import cors from "cors";
 import express, { Express, Request, Response, NextFunction } from "express";
 import routes from "./routes.ts";
 import dotenv from "dotenv";
+import config from "./config.ts";
 
 dotenv.config();
 
@@ -19,10 +20,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 // Middleware
 app.use(
   cors({
-    origin:
-      process.env.NODE_ENV === "production"
-        ? "https://mydomain.dev"
-        : "http://localhost:3000",
+    origin: config.baseUrl,
     methods: ["GET", "POST"],
     allowedHeaders: ["Content-Type"],
   }),
@@ -55,6 +53,6 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
 
 if (require.main === module) {
   app.listen(port, () => {
-    console.log(`Server running on http://localhost:${port}`);
+    console.log(`Server running on ${config.baseUrl}:${config.port}`);
   });
 }
