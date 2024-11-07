@@ -1,4 +1,4 @@
-import express, { Request, Response } from "express";
+import express, { Request, Response, NextFunction } from "express";
 import { HtmlParser } from "./services/htmlParser";
 import generateFeed from "./services/generateFeed";
 
@@ -9,39 +9,70 @@ router.get("/", (_, res: Response) => {
   res.send("Hello from the server");
 });
 
-router.get("/analyze/:url", async (req: Request, res: Response) => {
-  const decodedUrl = decodeURIComponent(req.params.url);
-  console.log("Route accessed with URL:", decodedUrl);
+// Error handling middleware
+const asyncHandler =
+  (fn: Function) => (req: Request, res: Response, next: NextFunction) => {
+    Promise.resolve(fn(req, res, next)).catch(next);
+  };
 
-  const feedAnalyzer = new HtmlParser(decodedUrl);
+// Routes
+router.get(
+  "/analyze/:url",
+  asyncHandler(async (req: Request, res: Response) => {
+    const decodedUrl = decodeURIComponent(req.params.url);
 
-  const result = await feedAnalyzer.analyze();
-  res.json({ success: true, result });
-});
+    const feedAnalyzer = new HtmlParser(decodedUrl);
 
-router.post("/generate-feed", (req, res) => {
-  const { feedItems, siteUrl } = req.body;
+    const result = await feedAnalyzer.analyze();
+    res.json({ success: true, result });
+  }),
+);
 
-  const { feedXml, feedId } = generateFeed(feedItems, siteUrl);
+router.post(
+  "/generate-feed",
+  asyncHandler(async (req: Request, res: Response) => {
+    const { feedItems, siteUrl } = req.body;
 
-  // Store the feed data in an in-memory store
-  feedStore.set(feedId, { feedXml, feedItems, siteUrl });
+    const { feedXml, feedId } = generateFeed(feedItems, siteUrl);
+    feedStore.set(feedId, { feedXml, feedItems, siteUrl });
 
-  res.send(`http://localhost:3000/api/feed/${feedId}.xml`);
-});
+    const feedUrl = new URL(
+      `/api/feed/${feedId}.xml`,
+      process.env.NODE_ENV === "production"
+        ? "https://rasha.dev/feedatron"
+        : "http://localhost:3000",
+    ).toString();
 
-router.get("/feed/:feedId.xml", (req: Request, res: Response) => {
-  const { feedId } = req.params;
+    res.send(feedUrl);
+  }),
+);
 
-  const feedData = feedStore.get(feedId);
+router.get(
+  "/feed/:feedId.xml",
+  asyncHandler(async (req: Request, res: Response) => {
+    const { feedId } = req.params;
+    const feedData = feedStore.get(feedId);
 
-  if (!feedData) {
-    res.status(404).send("Feed not found");
-    return;
-  }
+    if (!feedData) {
+      res.status(404).send("Feed not found");
+      return;
+    }
 
-  res.set("Content-Type", "text/xml");
-  res.send(feedData.feedXml);
+    res.set("Content-Type", "text/xml");
+    res.send(feedData.feedXml);
+  }),
+);
+
+// Global error handler
+router.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+  console.error(err.stack);
+  res.status(500).json({
+    success: false,
+    error:
+      process.env.NODE_ENV === "production"
+        ? "Internal server error"
+        : err.message,
+  });
 });
 
 export default router;
