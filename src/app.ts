@@ -36,10 +36,19 @@ export class RSSApp {
   }
 
   private init(): void {
-    // Go back to "/" on reload
-    if (window.location.pathname !== "/") {
-      window.location.href = "/";
-      return;
+    // Handle page reloads more gracefully
+    if (window.performance) {
+      const navigationEntry = performance.getEntriesByType(
+        "navigation",
+      )[0] as PerformanceNavigationTiming;
+      if (navigationEntry && navigationEntry.type === "reload") {
+        const path = window.location.pathname;
+        // Only redirect to home if we're in the mapping view
+        if (path.match(/^\/[^/]+\/mapping$/)) {
+          window.location.href = "/";
+          return;
+        }
+      }
     }
 
     // Initialize DOM elements
