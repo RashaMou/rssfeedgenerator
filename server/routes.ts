@@ -8,7 +8,7 @@ import config from "./config.js";
 const router = express.Router();
 const feedStore = new Map();
 
-router.get("/", (_, res: Response) => {
+router.get("/", (_: Request, res: Response) => {
   res.send("Hello from the server");
 });
 

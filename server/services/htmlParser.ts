@@ -67,7 +67,7 @@ export class HtmlParser {
     });
 
     // 2. Clean remaining elements
-    $("*").each((_, element: cheerio.Element) => {
+    $("*").each((_: number, element: cheerio.Element) => {
       const el = $(element);
       const attributes = (
         element as unknown as { attribs: Record<string, string> }
@@ -124,7 +124,7 @@ export class HtmlParser {
     });
 
     // Remove link functionality while keeping the visual structure
-    $("a").each((_, element) => {
+    $("a").each((_: number, element) => {
       const el = $(element);
       // Store the href as a data attribute for reference
       const href = el.attr("href");
@@ -173,7 +173,7 @@ export class HtmlParser {
 
       const feedItems: FeedItem[] = [];
 
-      articles.each((_, article) => {
+      articles.each((_: number, article) => {
         const $article = $(article);
         const item: Partial<FeedItem> = {};
 
@@ -405,7 +405,7 @@ ${sampleContent}`;
 
         // Extract items using suggested selectors
         const items: FeedItem[] = [];
-        $(llmSuggestions.selectors.container).each((_, element) => {
+        $(llmSuggestions.selectors.container).each((_: number, element) => {
           const $item = $(element);
 
           // Try to get absolute URL
