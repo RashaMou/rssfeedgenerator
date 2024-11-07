@@ -3,7 +3,7 @@
     "target": "ES2015",
     "useDefineForClassFields": true,
     "module": "ES2015",
-    "lib": ["ES2015", "DOM", "DOM.Iterable"],
+    "lib": ["ES2015", "DOM", "DOM.Iterable", "ESNext"],
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -23,7 +23,11 @@
     /* Type checking */
     "strict": true,
     "noImplicitAny": true,
-    "strictPropertyInitialization": true
+    "strictPropertyInitialization": true,
+
+    "noUnusedLocals": true,
+    "noUnusedParameters": true
   },
-  "include": ["src/**/*", "tests/**/*"]
+  "include": ["src/**/*", "tests/**/*"],
+  "exclude": ["node_modules", "dist"]
 }

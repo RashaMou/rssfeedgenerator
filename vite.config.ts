@@ -16,7 +16,18 @@ export default defineConfig({
   build: {
     outDir: "dist",
     sourcemap: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ["cheerio", "feed", "uuid"],
+        },
+      },
+    },
+    emptyOutDir: true,
+    target: "esnext",
+    minify: "terser",
   },
+  publicDir: "public",
   resolve: {
     alias: {
       "@": resolve(__dirname, "./src"),
