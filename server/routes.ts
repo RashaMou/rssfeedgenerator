@@ -1,6 +1,6 @@
 import express, { Request, Response, NextFunction } from "express";
-import { HtmlParser } from "./services/htmlParser";
-import generateFeed from "./services/generateFeed";
+import { HtmlParser } from "./services/htmlParser.js";
+import generateFeed from "./services/generateFeed.js";
 
 const router = express.Router();
 const feedStore = new Map();
@@ -64,7 +64,7 @@ router.get(
 );
 
 // Global error handler
-router.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+router.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   console.error(err.stack);
   res.status(500).json({
     success: false,

@@ -1,6 +1,6 @@
 import * as cheerio from "cheerio";
-import { AnalysisResult, FeedItem } from "./types";
-import config from "../config";
+import { AnalysisResult, FeedItem } from "./types.js";
+import config from "../config.js";
 
 export class HtmlParser {
   private logs: string[] = [];
