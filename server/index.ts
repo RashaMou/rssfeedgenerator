@@ -36,6 +36,10 @@ app.use(express.json({ limit: "1mb" }));
 // Routes
 app.use("/api", routes);
 
+app.get("*", (_: Request, res: Response) => {
+  res.redirect("/");
+});
+
 // 404 handler
 app.use((_: Request, res: Response) => {
   res.status(404).json({
