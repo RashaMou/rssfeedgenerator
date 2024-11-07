@@ -4,11 +4,12 @@ import { FeedItem } from "./types";
 
 const generateFeed = (feedItems: FeedItem[], siteUrl: string) => {
   const feedId = uuid();
+  const siteName = new URL(siteUrl).hostname;
 
   const feed = new Feed({
-    title: new URL(siteUrl).hostname,
+    title: siteName,
     id: feedId,
-    link: `http://localhost:3000/feed/${feedId}.xml`,
+    link: `http://localhost:3000/feed/${siteName}.xml`,
     copyright: "",
     feedLinks: {
       json: "https://example.com/json",

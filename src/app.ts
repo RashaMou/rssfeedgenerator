@@ -7,6 +7,7 @@ export class RSSApp {
   private loadingElement!: HTMLElement;
   private loadingMessageElement!: HTMLElement;
   private errorElement!: HTMLElement;
+  private dialog!: HTMLDialogElement;
   private templates!: Templates;
   private currentElementClickHandler: EventListener = (event) =>
     this.handleElementClick(event, this.state.activeSelector);
@@ -27,6 +28,7 @@ export class RSSApp {
       selectionMode: false,
       activeSelector: "",
       html: "",
+      feedLink: "",
     };
 
     this.init();
@@ -37,10 +39,12 @@ export class RSSApp {
     // Initialize DOM elements
     const errorElement = document.getElementById("error") as HTMLElement;
     const loadingElement = document.getElementById("loading") as HTMLElement;
+    const dialog = document.getElementById("feedDialog") as HTMLDialogElement;
 
     // Assign fetched elements to class properties
     this.loadingElement = loadingElement;
     this.errorElement = errorElement;
+    this.dialog = dialog;
 
     // Initialize loading message element
     this.loadingMessageElement = document.createElement("div");
@@ -51,7 +55,8 @@ export class RSSApp {
     if (
       !this.loadingElement ||
       !this.errorElement ||
-      !this.loadingMessageElement
+      !this.loadingMessageElement ||
+      !this.dialog
     ) {
       throw new Error("Required DOM elements not found");
     }
@@ -120,6 +125,39 @@ export class RSSApp {
       e.preventDefault();
       await this.handleUrlSubmit(e);
     });
+
+    // Setup dialog event listeners
+    this.dialog.addEventListener("click", (e) => {
+      const dialogDimensions = this.dialog.getBoundingClientRect();
+      if (
+        e.clientX < dialogDimensions.left ||
+        e.clientX > dialogDimensions.right ||
+        e.clientY < dialogDimensions.top ||
+        e.clientY > dialogDimensions.bottom
+      ) {
+        this.dialog.close();
+      }
+    });
+
+    const closeButton = document.getElementById("closeBtn");
+    closeButton?.addEventListener("click", this.closeDialog);
+
+    const copyButton = document.querySelector(
+      ".copy-button",
+    ) as HTMLButtonElement;
+    copyButton.textContent = "Copy link";
+    copyButton?.addEventListener("click", () => {
+      this.copyRssUrl(copyButton);
+    });
+  }
+
+  private async copyRssUrl(button: HTMLButtonElement) {
+    const url = this.state.feedLink;
+    await navigator.clipboard.writeText(url);
+    button.textContent = "Link copied";
+
+    button.classList.add("success");
+    setTimeout(() => button.classList.remove("success"), 1000);
   }
 
   private initializeMappingView(html: string): void {
@@ -188,8 +226,14 @@ export class RSSApp {
 
       // add event listener to generate feed button
       const generateButton = document.getElementById("generate-feed");
+
       generateButton?.addEventListener("click", async (e) => {
         e.preventDefault();
+
+        const copyButton = document.querySelector(
+          ".copy-button",
+        ) as HTMLButtonElement;
+        copyButton.textContent = "Copy link";
 
         const response = await fetch("/api/generate-feed", {
           method: "POST",
@@ -201,10 +245,18 @@ export class RSSApp {
         });
 
         const feedLink = await response.text();
-        const feedLinkElement = document.createElement("a");
-        feedLinkElement.href = feedLink;
-        feedLinkElement.textContent = "View RSS Feed";
-        mappingContainer.appendChild(feedLinkElement);
+        this.state.feedLink = feedLink;
+        const rssUrlElement = document.getElementById(
+          "rssUrl",
+        ) as HTMLAnchorElement;
+
+        if (rssUrlElement) {
+          rssUrlElement.href = this.state.feedLink;
+          rssUrlElement.target = "_blank";
+          rssUrlElement.rel = "noopener noreferrer";
+        }
+
+        this.showDialog();
       });
 
       contentContainer.appendChild(mappingContainer);
@@ -212,6 +264,14 @@ export class RSSApp {
       console.error("Content container not found");
     }
   }
+
+  private showDialog = () => {
+    this.dialog.showModal();
+  };
+
+  private closeDialog = () => {
+    this.dialog.close();
+  };
 
   private validateUrl(url: string): boolean {
     let isValid = false;

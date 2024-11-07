@@ -2,6 +2,7 @@ import { FeedItem } from "../server/services/types";
 
 interface RSSState {
   status: "loading" | "error" | "";
+  feedLink: string;
   currentUrl: string;
   preview: string | null;
   iframeDocument: Document | null;
