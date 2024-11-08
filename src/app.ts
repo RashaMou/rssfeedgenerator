@@ -1,5 +1,5 @@
 import { RSSState, Templates } from "./types";
-import { onRouteChange, navigateTo } from "./router";
+import router from "./router.js";
 import getElementPath from "./utils/getElementPath";
 
 export class RSSApp {
@@ -31,8 +31,10 @@ export class RSSApp {
       feedLink: "",
     };
 
+    // Initialize routing
+    router.onRouteChange(() => this.onViewChange());
+
     this.init();
-    onRouteChange(() => this.onViewChange());
   }
 
   private init(): void {
@@ -335,39 +337,6 @@ export class RSSApp {
       return "";
     }
   }
-  // private validateUrl(url: string): boolean {
-  //   try {
-  //     // Check if URL is empty or just whitespace
-  //     if (!url.trim()) {
-  //       this.errorElement.textContent = "URL cannot be empty";
-  //       this.updateStatus("error");
-  //       return false;
-  //     }
-  //
-  //     // Create URL object to validate format
-  //     const urlObject = new URL(url);
-  //
-  //     // Check protocol
-  //     if (!["http:", "https:"].includes(urlObject.protocol)) {
-  //       this.errorElement.textContent = "URL must use http or https protocol";
-  //       this.updateStatus("error");
-  //       return false;
-  //     }
-  //
-  //     // Check if has valid domain
-  //     if (!urlObject.hostname) {
-  //       this.errorElement.textContent = "URL must have a valid domain";
-  //       this.updateStatus("error");
-  //       return false;
-  //     }
-  //
-  //     return true;
-  //   } catch (error) {
-  //     this.errorElement.textContent = "Please enter a valid URL";
-  //     this.updateStatus("error");
-  //     return false;
-  //   }
-  // }
 
   private toggleSelectionMode(buttonId: string): void {
     // if we don't already have an activeSelector
@@ -536,7 +505,7 @@ export class RSSApp {
         await this.updateLoadingMessage(this.loadingSteps[2]);
 
         const siteName = new URL(this.state.currentUrl).hostname;
-        navigateTo(`/${siteName}/mapping`);
+        router.navigateTo(`/${siteName}/mapping`);
         this.updateStatus("");
       }
     } catch (err) {

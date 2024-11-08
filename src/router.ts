@@ -1,25 +1,29 @@
-let onRouteChangeCallback: (() => void) | null = null;
+const router = {
+  onRouteChangeCallback: null as (() => void) | null,
 
-// Set the callback for view changes, called by RSSApp
-export function onRouteChange(callback: () => void) {
-  onRouteChangeCallback = callback;
-}
+  // Set the callback for view changes
+  onRouteChange(callback: () => void) {
+    this.onRouteChangeCallback = callback;
+  },
 
-// Routing logic to determine which view to load based on the path
-export function router() {
-  if (onRouteChangeCallback) {
-    onRouteChangeCallback(); // Trigger RSSApp's view change handler
-  }
-}
+  // Route handler
+  router() {
+    if (this.onRouteChangeCallback) {
+      this.onRouteChangeCallback();
+    }
+  },
 
-// Programmatic navigation
-export function navigateTo(path: string) {
-  window.history.pushState({}, "", path);
-  router(); // Call router to trigger the view change
-}
+  // Navigate programmatically
+  navigateTo(path: string) {
+    window.history.pushState({}, "", path);
+    this.router();
+  },
 
-// Initialize router to handle initial load and back/forward navigation
-export function initializeRouter() {
-  window.addEventListener("popstate", router); // Handle back/forward
-  window.addEventListener("load", router); // Load initial route on page load
-}
+  // Initialize the router to handle navigation events
+  initializeRouter() {
+    window.addEventListener("popstate", () => this.router());
+    window.addEventListener("load", () => this.router());
+  },
+};
+
+export default router;

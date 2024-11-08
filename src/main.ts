@@ -1,5 +1,6 @@
-import { RSSApp } from "./app.ts";
-import { initializeRouter } from "./router.ts";
+import { RSSApp } from "./app.js";
+import router from "./router.js";
 
-initializeRouter();
+router.initializeRouter();
+
 const app = new RSSApp();
