@@ -1,4 +1,4 @@
-# Feed-a-tron
+# Feed-o-tron
 
 This project aims to create a web application that transforms website content
 into RSS feeds. Users can manage their feeds with functionalities to add, edit,
