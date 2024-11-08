@@ -1,9 +1,10 @@
 import { RSSState, Templates } from "./types";
 import { onRouteChange, navigateTo } from "./router";
 import getElementPath from "./utils/getElementPath";
+import { Store } from "./state/Store";
 
 export class RSSApp {
-  private state: RSSState;
+  private store: Store;
   private loadingElement!: HTMLElement;
   private loadingMessageElement!: HTMLElement;
   private errorElement!: HTMLElement;
@@ -18,21 +19,14 @@ export class RSSApp {
   ];
 
   constructor() {
-    this.state = {
-      status: "",
-      currentUrl: "",
-      preview: null,
-      iframeDocument: null,
-      originalFeedItems: [],
-      currentFeedItems: [],
-      selectionMode: false,
-      activeSelector: "",
-      html: "",
-      feedLink: "",
-    };
+    this.store = new Store();
 
     this.init();
     onRouteChange(() => this.onViewChange());
+  }
+
+  get state() {
+    return this.store.stateProxy;
   }
 
   private init(): void {
