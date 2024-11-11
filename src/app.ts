@@ -18,12 +18,6 @@ export class RSSApp {
   constructor() {
     this.templateManager = new TemplateManager();
 
-    this.eventManager = new EventManager(
-      this.onUrlSubmit.bind(this),
-      this.onGenerateFeed.bind(this),
-      this.onCopyFeedUrl.bind(this),
-    );
-
     this.templateManager.initialize();
 
     this.state = {
@@ -40,17 +34,71 @@ export class RSSApp {
     };
 
     this.updateState = (newState) => this.setState(newState);
-    this.ui = new UIManager(this.updateState, this.state);
+    this.ui = new UIManager(this.state);
+
+    this.eventManager = new EventManager(
+      this.onUrlSubmit.bind(this),
+      this.onToggleSelection.bind(this),
+      this.onGenerateFeed.bind(this),
+      this.onCopyFeedUrl.bind(this),
+      this.updateFeedItems.bind(this),
+      this.state,
+      this.ui,
+    );
+
     this.viewManager = new ViewManager(
       this.eventManager,
       this.ui,
       this.templateManager,
+      this.state,
     );
 
     // Initialize routing
     router.onRouteChange(() => this.onViewChange());
 
     this.init();
+  }
+
+  public updateFeedItems(elementPath: string, mappingFieldName: string): void {
+    const similarElements =
+      this.state.iframeDocument!.querySelectorAll(elementPath);
+
+    this.state.currentFeedItems = this.state.originalFeedItems.map(
+      (item, index) => {
+        const element = similarElements[index];
+        let value = "";
+
+        if (element) {
+          if (mappingFieldName === "link") {
+            // For links, prefer data-href, fallback to href
+            value =
+              element.getAttribute("data-href") ||
+              element.getAttribute("href") ||
+              "";
+          } else {
+            // For other fields, use text content
+            value = element.textContent?.trim() || "";
+          }
+        }
+
+        return {
+          ...item,
+          [mappingFieldName]: value,
+        };
+      },
+    );
+    this.viewManager.renderRssPreview();
+  }
+
+  // Called whenever the view changes (e.g., switching to mapping or home)
+  private onViewChange(): void {
+    const path = window.location.pathname;
+
+    if (path.match(/^\/[^/]+\/mapping$/)) {
+      this.viewManager.renderMappingView(this.state.html);
+    } else {
+      this.viewManager.renderHomeView();
+    }
   }
 
   private async onUrlSubmit(urlInput: string): Promise<void> {
@@ -63,11 +111,9 @@ export class RSSApp {
 
     this.updateState({ currentUrl: validatedUrl });
 
-    this.ui.showLoading("");
-
     try {
       // Step 1: Analyze Website Structure
-      this.ui.showLoading("Analyzing website structure...");
+      await this.ui.showLoading("Analyzing website structure...");
 
       const response = await fetch(
         `/api/analyze/${encodeURIComponent(this.state.currentUrl)}`,
@@ -91,7 +137,7 @@ export class RSSApp {
       }
 
       // Step 2: Generate Preview
-      this.ui.showLoading("Generating preview...");
+      await this.ui.showLoading("Generating preview...");
 
       if (analysisResult.success) {
         this.updateState({
@@ -101,7 +147,7 @@ export class RSSApp {
         });
 
         // Step 3: Setup Mapping Tools
-        this.ui.showLoading("Setting up mapping tools...");
+        await this.ui.showLoading("Setting up mapping tools...");
 
         const siteName = new URL(this.state.currentUrl).hostname;
         router.navigateTo(`/${siteName}/mapping`);
@@ -112,6 +158,42 @@ export class RSSApp {
       this.ui.showError("some error");
       console.error("Analysis Failed:", err);
     }
+  }
+
+  private async onToggleSelection(buttonId: string): Promise<void> {
+    // if we don't already have an activeSelector
+    if (!this.state.activeSelector) {
+      this.state.selectionMode = true;
+      this.state.activeSelector = buttonId;
+    }
+
+    // if we do already have an activeSelector
+    if (this.state.selectionMode && this.state.activeSelector !== buttonId) {
+      this.state.activeSelector = buttonId;
+      // this removeEventListener should go in the EventManager
+      this.eventManager.registerIframeEventClear();
+    }
+
+    if (this.state.selectionMode) {
+      this.eventManager.registerIframeEvents();
+    }
+  }
+
+  public async onCopyFeedUrl(): Promise<void> {
+    const rssUrlElement = document.querySelector(
+      "#rssUrl",
+    ) as HTMLAnchorElement;
+    if (!rssUrlElement?.href) return;
+
+    const copyButton = document.querySelector(
+      ".copy-button",
+    ) as HTMLButtonElement;
+
+    await navigator.clipboard.writeText(rssUrlElement.href);
+    copyButton.textContent = "Link copied";
+
+    copyButton.classList.add("success");
+    setTimeout(() => copyButton.classList.remove("success"), 1000);
   }
 
   private async onGenerateFeed(): Promise<void> {
@@ -139,31 +221,8 @@ export class RSSApp {
     this.ui.showDialog();
   }
 
-  private async onCopyFeedUrl() {
-    const copyButton = document.querySelector(
-      ".copy-button",
-    ) as HTMLButtonElement;
-
-    copyButton.textContent = "Copy link";
-
-    const rssUrlElement = document.querySelector(
-      "#rssUrl",
-    ) as HTMLAnchorElement;
-    if (!rssUrlElement?.href) return;
-
-    try {
-      await navigator.clipboard.writeText(rssUrlElement.href);
-      copyButton.textContent = "Link copied";
-      copyButton.classList.add("success");
-      setTimeout(() => copyButton.classList.remove("success"), 1000);
-    } catch (error) {
-      console.error("Failed to copy to clipboard:", error);
-    }
-  }
-
   private setState(newState: Partial<RSSState>) {
     this.state = { ...this.state, ...newState };
-    // this.uiManager.render(this.state); // Rerender UI with updated state
   }
 
   private init(): void {
@@ -183,17 +242,6 @@ export class RSSApp {
     }
 
     this.viewManager.renderHomeView();
-  }
-
-  // Called whenever the view changes (e.g., switching to mapping or home)
-  private onViewChange(): void {
-    const path = window.location.pathname;
-
-    if (path.match(/^\/[^/]+\/mapping$/)) {
-      this.viewManager.renderMappingView(this.state.html);
-    } else {
-      this.viewManager.renderHomeView();
-    }
   }
 
   private async validateUrl(url: string): Promise<string> {
