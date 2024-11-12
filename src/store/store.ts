@@ -1,4 +1,4 @@
-import { FeedItem } from "../server/services/types";
+import { FeedItem } from "server/services/types";
 
 interface RSSState {
   currentUrl: string;
@@ -37,7 +37,6 @@ class RSSStore {
     this.state = { ...this.state, ...partial };
   }
 
-  // Specific state updates
   setCurrentUrl(url: string): void {
     this.setState({ currentUrl: url });
   }

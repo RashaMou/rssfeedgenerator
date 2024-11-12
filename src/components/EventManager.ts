@@ -20,8 +20,8 @@
  * eventManager.registerDialogEvents();
  * ```
  */
-import { store } from "./store";
-import getElementPath from "./utils/getElementPath";
+import { store } from "@/store/store";
+import getElementPath from "@/utils/getElementPath";
 
 export class EventManager {
   private urlForm: HTMLFormElement | null = null;
@@ -118,7 +118,14 @@ export class EventManager {
       ".copy-button",
     ) as HTMLButtonElement;
 
-    if (!this.dialog || !this.closeButton || !this.copyButton) return;
+    if (!this.dialog || !this.closeButton || !this.copyButton) {
+      console.error("Dialog elements not found:", {
+        dialog: !!this.dialog,
+        closeButton: !!this.closeButton,
+        copyButton: !!this.copyButton,
+      });
+      return;
+    }
 
     // Dialog close button
     this.closeButton.addEventListener("click", this.handleDialogClose);
@@ -159,7 +166,7 @@ export class EventManager {
     );
   }
 
-  public handleUrlSubmit = async (e: SubmitEvent) => {
+  private handleUrlSubmit = async (e: SubmitEvent) => {
     e.preventDefault();
     const form = e.target as HTMLFormElement;
     const input = form.querySelector("input")?.value;

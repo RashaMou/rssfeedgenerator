@@ -1,11 +1,11 @@
-import router from "./router.js";
-import { UIManager } from "./UIManager";
-import { TemplateManager } from "./TemplateManager";
-import { EventManager } from "./EventManager";
-import { ViewManager } from "./ViewManager";
-import { store } from "./store";
-import { APIClient } from "./APIClient.js";
-import { APIError } from "./types.js";
+import router from "@/router/router.js";
+import { UIManager } from "@/components/UIManager";
+import { TemplateManager } from "@/components/TemplateManager";
+import { EventManager } from "@/components/EventManager";
+import { ViewManager } from "@/components/ViewManager";
+import { store } from "@/store/store.js";
+import { APIClient } from "@/api/APIClient.js";
+import { APIError } from "@/types.js";
 
 export class RSSApp {
   private templateManager: TemplateManager;
@@ -26,7 +26,6 @@ export class RSSApp {
       this.onGenerateFeed.bind(this),
       this.onCopyFeedUrl.bind(this),
       this.updateFeedItems.bind(this),
-      this.ui,
     );
 
     this.viewManager = new ViewManager(
@@ -35,13 +34,12 @@ export class RSSApp {
       this.templateManager,
     );
 
-    // Initialize routing
     router.onRouteChange(() => this.onViewChange());
 
     this.init();
   }
 
-  public updateFeedItems(elementPath: string, mappingFieldName: string): void {
+  private updateFeedItems(elementPath: string, mappingFieldName: string): void {
     const { iframeDocument, originalFeedItems } = store.getState();
 
     if (!iframeDocument) return;
@@ -91,7 +89,6 @@ export class RSSApp {
     const validatedUrl = await this.validateUrl(urlInput);
 
     if (!validatedUrl) {
-      this.ui.showError("hm?");
       return;
     }
 
@@ -125,12 +122,14 @@ export class RSSApp {
         this.ui.hideLoading();
       }
     } catch (err) {
-      this.ui.showError("some error");
+      this.ui.showError(
+        "Something went wrong, please check the url and try again",
+      );
       console.error("Analysis Failed:", err);
     }
   }
 
-  public async onToggleSelection(buttonId: string): Promise<void> {
+  private async onToggleSelection(buttonId: string): Promise<void> {
     const { activeSelector } = store.getState();
 
     // if we don't already have an activeSelector
@@ -151,20 +150,16 @@ export class RSSApp {
     }
   }
 
-  public async onCopyFeedUrl(): Promise<void> {
-    console.log("in onCopyFeedUrl");
-    const rssUrlElement = document.querySelector(
-      "#rssUrl",
-    ) as HTMLAnchorElement;
+  private async onCopyFeedUrl(): Promise<void> {
+    const xmlLink = document.querySelector(".xml-link") as HTMLAnchorElement;
 
-    console.log("rssUrlElement", rssUrlElement);
-    if (!rssUrlElement?.href) return;
+    if (!xmlLink?.href) return;
 
     const copyButton = document.querySelector(
       ".copy-button",
     ) as HTMLButtonElement;
 
-    await navigator.clipboard.writeText(rssUrlElement.href);
+    await navigator.clipboard.writeText(xmlLink.href);
     copyButton.textContent = "Link copied";
 
     copyButton.classList.add("success");
@@ -174,20 +169,32 @@ export class RSSApp {
   private async onGenerateFeed(): Promise<void> {
     const { currentFeedItems, currentUrl } = store.getState();
 
-    const feedLink = await APIClient.generateFeed(currentFeedItems, currentUrl);
-    store.setFeedLink(feedLink);
+    try {
+      const feedLink = await APIClient.generateFeed(
+        currentFeedItems,
+        currentUrl,
+      );
 
-    const rssUrlElement = document.getElementById(
-      "rssUrl",
-    ) as HTMLAnchorElement;
+      if (!feedLink) {
+        this.ui.showError("Failed to generate feed link");
+        return;
+      }
 
-    if (rssUrlElement) {
-      rssUrlElement.href = feedLink;
-      rssUrlElement.target = "_blank";
-      rssUrlElement.rel = "noopener noreferrer";
+      store.setFeedLink(feedLink);
+
+      // Update XML link
+      const xmlLink = document.querySelector(".xml-link") as HTMLAnchorElement;
+      if (xmlLink) {
+        xmlLink.href = feedLink;
+        xmlLink.target = "_blank";
+        xmlLink.rel = "noopener noreferrer";
+      }
+
+      this.ui.showDialog();
+    } catch (error) {
+      console.error("Error generating feed:", error);
+      this.ui.showError("Failed to generate feed");
     }
-
-    this.ui.showDialog();
   }
 
   private init(): void {

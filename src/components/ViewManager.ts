@@ -22,7 +22,7 @@ import { EventManager } from "./EventManager";
 import { TemplateManager } from "./TemplateManager";
 import { UIManager } from "./UIManager";
 import { FeedItem } from "server/services/types";
-import { store } from "./store";
+import { store } from "@/store/store";
 
 export class ViewManager {
   private templateManager: TemplateManager;
