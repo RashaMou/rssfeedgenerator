@@ -20,26 +20,23 @@
  */
 import { EventManager } from "./EventManager";
 import { TemplateManager } from "./TemplateManager";
-import { RSSState } from "./types";
 import { UIManager } from "./UIManager";
 import { FeedItem } from "server/services/types";
+import { store } from "./store";
 
 export class ViewManager {
   private templateManager: TemplateManager;
   private uiManager: UIManager;
   private eventManager: EventManager;
-  private state: RSSState;
 
   constructor(
     eventManager: EventManager,
     uiManager: UIManager,
     templateManager: TemplateManager,
-    state: RSSState,
   ) {
     this.uiManager = uiManager;
     this.templateManager = templateManager;
     this.eventManager = eventManager;
-    this.state = state;
   }
 
   public renderHomeView() {
@@ -89,8 +86,10 @@ export class ViewManager {
     ) as HTMLIFrameElement;
 
     if (iframe) {
+      const { currentUrl } = store.getState();
+
       // Inject <base> tag at the start of the <head> section
-      const baseTag = `<base href="${this.state.currentUrl}">`;
+      const baseTag = `<base href="${currentUrl}">`;
       const modifiedHtml = html.replace(
         /<head>/i, // Find the <head> tag to insert the <base> tag after it
         `<head>${baseTag}`,
@@ -100,9 +99,10 @@ export class ViewManager {
         const iframeDocument: Document =
           iframe.contentDocument! || iframe.contentWindow?.document;
 
-        this.state.iframeDocument = iframeDocument;
+        store.setIframeDocument(iframeDocument);
 
-        this.eventManager.registerIframeEventListeners();
+        this.eventManager.registerIframeEvents();
+        this.renderRssPreview();
       };
     } else {
       console.error("iframe element not found in the cloned template.");
@@ -110,6 +110,10 @@ export class ViewManager {
     mappingContainer.appendChild(elementMappingClone);
     mappingContainer.appendChild(websitePreviewClone);
     mappingContainer.appendChild(rssPreviewClone);
+
+    this.eventManager.registerElementSelectors();
+    this.eventManager.registerGenerateButton();
+    this.eventManager.registerDialogEvents();
   }
 
   public renderRssPreview() {
@@ -122,7 +126,9 @@ export class ViewManager {
 
     feedItemsDiv.innerHTML = "";
 
-    this.state.currentFeedItems.forEach((feedItem: FeedItem) => {
+    const { currentFeedItems } = store.getState();
+
+    currentFeedItems.forEach((feedItem: FeedItem) => {
       const itemDiv = document.createElement("div");
 
       const fields = {
@@ -135,7 +141,7 @@ export class ViewManager {
 
       for (const [fieldName, content] of Object.entries(fields)) {
         const fieldElement =
-          this.templateManager.createFromTemplate("feedFields");
+          this.templateManager.createFromTemplate("feedFieldTemplate");
         const nameElement = fieldElement.querySelector(".field-name");
         const contentElement = fieldElement.querySelector(".field-content");
 

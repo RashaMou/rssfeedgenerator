@@ -1,17 +1,13 @@
-import { RSSState } from "./types";
 import router from "./router.js";
 import { UIManager } from "./UIManager";
 import { TemplateManager } from "./TemplateManager";
 import { EventManager } from "./EventManager";
 import { ViewManager } from "./ViewManager";
-
-type StateUpdater = (newState: Partial<RSSState>) => void;
+import { store } from "./store";
 
 export class RSSApp {
   private templateManager: TemplateManager;
   private ui: UIManager;
-  private state: RSSState;
-  private updateState: StateUpdater;
   private eventManager: EventManager;
   private viewManager: ViewManager;
 
@@ -20,21 +16,7 @@ export class RSSApp {
 
     this.templateManager.initialize();
 
-    this.state = {
-      status: "",
-      currentUrl: "",
-      preview: null,
-      iframeDocument: null,
-      originalFeedItems: [],
-      currentFeedItems: [],
-      selectionMode: false,
-      activeSelector: "",
-      html: "",
-      feedLink: "",
-    };
-
-    this.updateState = (newState) => this.setState(newState);
-    this.ui = new UIManager(this.state);
+    this.ui = new UIManager();
 
     this.eventManager = new EventManager(
       this.onUrlSubmit.bind(this),
@@ -42,7 +24,6 @@ export class RSSApp {
       this.onGenerateFeed.bind(this),
       this.onCopyFeedUrl.bind(this),
       this.updateFeedItems.bind(this),
-      this.state,
       this.ui,
     );
 
@@ -50,7 +31,6 @@ export class RSSApp {
       this.eventManager,
       this.ui,
       this.templateManager,
-      this.state,
     );
 
     // Initialize routing
@@ -60,33 +40,36 @@ export class RSSApp {
   }
 
   public updateFeedItems(elementPath: string, mappingFieldName: string): void {
-    const similarElements =
-      this.state.iframeDocument!.querySelectorAll(elementPath);
+    const { iframeDocument, originalFeedItems } = store.getState();
 
-    this.state.currentFeedItems = this.state.originalFeedItems.map(
-      (item, index) => {
-        const element = similarElements[index];
-        let value = "";
+    if (!iframeDocument) return;
 
-        if (element) {
-          if (mappingFieldName === "link") {
-            // For links, prefer data-href, fallback to href
-            value =
-              element.getAttribute("data-href") ||
-              element.getAttribute("href") ||
-              "";
-          } else {
-            // For other fields, use text content
-            value = element.textContent?.trim() || "";
-          }
+    const similarElements = iframeDocument!.querySelectorAll(elementPath);
+
+    const updatedItems = originalFeedItems.map((item, index) => {
+      const element = similarElements[index];
+      let value = "";
+
+      if (element) {
+        if (mappingFieldName === "link") {
+          // For links, prefer data-href, fallback to href
+          value =
+            element.getAttribute("data-href") ||
+            element.getAttribute("href") ||
+            "";
+        } else {
+          // For other fields, use text content
+          value = element.textContent?.trim() || "";
         }
+      }
 
-        return {
-          ...item,
-          [mappingFieldName]: value,
-        };
-      },
-    );
+      return {
+        ...item,
+        [mappingFieldName]: value,
+      };
+    });
+
+    store.updateCurrentFeedItems(updatedItems);
     this.viewManager.renderRssPreview();
   }
 
@@ -95,7 +78,8 @@ export class RSSApp {
     const path = window.location.pathname;
 
     if (path.match(/^\/[^/]+\/mapping$/)) {
-      this.viewManager.renderMappingView(this.state.html);
+      const { html } = store.getState();
+      this.viewManager.renderMappingView(html);
     } else {
       this.viewManager.renderHomeView();
     }
@@ -109,14 +93,15 @@ export class RSSApp {
       return;
     }
 
-    this.updateState({ currentUrl: validatedUrl });
+    store.setCurrentUrl(validatedUrl);
+    const { currentUrl } = store.getState();
 
     try {
       // Step 1: Analyze Website Structure
       await this.ui.showLoading("Analyzing website structure...");
 
       const response = await fetch(
-        `/api/analyze/${encodeURIComponent(this.state.currentUrl)}`,
+        `/api/analyze/${encodeURIComponent(currentUrl)}`,
         {
           method: "GET",
           headers: {
@@ -140,16 +125,13 @@ export class RSSApp {
       await this.ui.showLoading("Generating preview...");
 
       if (analysisResult.success) {
-        this.updateState({
-          originalFeedItems: analysisResult.result.items,
-          currentFeedItems: analysisResult.result.items,
-          html: analysisResult.result.html,
-        });
+        store.setFeedItems(analysisResult.result.items);
+        store.setHtml(analysisResult.result.html);
 
         // Step 3: Setup Mapping Tools
         await this.ui.showLoading("Setting up mapping tools...");
 
-        const siteName = new URL(this.state.currentUrl).hostname;
+        const siteName = new URL(currentUrl).hostname;
         router.navigateTo(`/${siteName}/mapping`);
         this.ui.hideError();
         this.ui.hideLoading();
@@ -160,29 +142,34 @@ export class RSSApp {
     }
   }
 
-  private async onToggleSelection(buttonId: string): Promise<void> {
+  public async onToggleSelection(buttonId: string): Promise<void> {
+    const { activeSelector } = store.getState();
+
     // if we don't already have an activeSelector
-    if (!this.state.activeSelector) {
-      this.state.selectionMode = true;
-      this.state.activeSelector = buttonId;
+    if (!activeSelector) {
+      store.setSelectionMode(true);
+      store.setActiveSelector(buttonId);
     }
 
     // if we do already have an activeSelector
-    if (this.state.selectionMode && this.state.activeSelector !== buttonId) {
-      this.state.activeSelector = buttonId;
-      // this removeEventListener should go in the EventManager
+    if (activeSelector && activeSelector !== buttonId) {
+      store.setActiveSelector(buttonId);
       this.eventManager.registerIframeEventClear();
     }
 
-    if (this.state.selectionMode) {
+    const { selectionMode } = store.getState();
+    if (selectionMode) {
       this.eventManager.registerIframeEvents();
     }
   }
 
   public async onCopyFeedUrl(): Promise<void> {
+    console.log("in onCopyFeedUrl");
     const rssUrlElement = document.querySelector(
       "#rssUrl",
     ) as HTMLAnchorElement;
+
+    console.log("rssUrlElement", rssUrlElement);
     if (!rssUrlElement?.href) return;
 
     const copyButton = document.querySelector(
@@ -197,32 +184,31 @@ export class RSSApp {
   }
 
   private async onGenerateFeed(): Promise<void> {
+    const { currentFeedItems, currentUrl } = store.getState();
+
     const response = await fetch("/api/generate-feed", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        feedItems: this.state.currentFeedItems,
-        siteUrl: this.state.currentUrl,
+        feedItems: currentFeedItems,
+        siteUrl: currentUrl,
       }),
     });
 
     const feedLink = await response.text();
-    this.state.feedLink = feedLink;
+    store.setFeedLink(feedLink);
+
     const rssUrlElement = document.getElementById(
       "rssUrl",
     ) as HTMLAnchorElement;
 
     if (rssUrlElement) {
-      rssUrlElement.href = this.state.feedLink;
+      rssUrlElement.href = feedLink;
       rssUrlElement.target = "_blank";
       rssUrlElement.rel = "noopener noreferrer";
     }
 
     this.ui.showDialog();
-  }
-
-  private setState(newState: Partial<RSSState>) {
-    this.state = { ...this.state, ...newState };
   }
 
   private init(): void {

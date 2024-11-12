@@ -18,23 +18,13 @@
  * uiManager.hideLoading();
  * ```
  */
-
-import { TemplateManager } from "./TemplateManager";
-import { RSSState } from "./types";
-import { FeedItem } from "server/services/types";
-
 export class UIManager {
   private loadingElement!: HTMLElement;
   private loadingMessageElement!: HTMLElement;
   private errorElement!: HTMLElement;
   private dialog!: HTMLDialogElement;
-  private templateManager: TemplateManager;
-  private state: RSSState;
 
-  constructor(state: RSSState) {
-    this.templateManager = new TemplateManager();
-    this.state = state;
-
+  constructor() {
     // Initialize DOM elements
     this.errorElement = document.getElementById("error") as HTMLElement;
     this.loadingElement = document.getElementById("loading") as HTMLElement;
@@ -54,43 +44,6 @@ export class UIManager {
     ) {
       throw new Error("Required DOM elements not found");
     }
-  }
-
-  public renderRssPreview() {
-    const feedItemsDiv = document.querySelector("#feedItems");
-    if (!feedItemsDiv) {
-      console.error("No feed items div found");
-      return;
-    }
-
-    feedItemsDiv.innerHTML = "";
-
-    this.state.currentFeedItems.forEach((feedItem: FeedItem) => {
-      const itemDiv = document.createElement("div");
-
-      const fields = {
-        title: feedItem.title,
-        author: feedItem.author,
-        date: feedItem.date,
-        link: feedItem.link,
-        description: feedItem.description,
-      };
-
-      for (const [fieldName, content] of Object.entries(fields)) {
-        const fieldElement =
-          this.templateManager.createFromTemplate("feedFields");
-        const nameElement = fieldElement.querySelector(".field-name");
-        const contentElement = fieldElement.querySelector(".field-content");
-
-        if (nameElement && contentElement) {
-          nameElement.textContent = fieldName;
-          contentElement.textContent = content;
-          itemDiv.appendChild(fieldElement);
-        }
-      }
-
-      feedItemsDiv.appendChild(itemDiv);
-    });
   }
 
   public showDialog = () => {

@@ -1,5 +1,5 @@
-import { RSSState } from "./types";
 import { UIManager } from "./UIManager";
+import { store } from "./store";
 import getElementPath from "./utils/getElementPath";
 
 /**
@@ -30,8 +30,10 @@ export class EventManager {
   private dialog: HTMLDialogElement | null = null;
   private closeButton: HTMLButtonElement | null = null;
   private copyButton: HTMLButtonElement | null = null;
-  private currentElementClickHandler: EventListener = (event) =>
-    this.handleElementClick(event, this.state.activeSelector);
+  private currentElementClickHandler: EventListener = (event) => {
+    const { activeSelector } = store.getState();
+    this.handleElementClick(event, activeSelector);
+  };
 
   constructor(
     private onUrlSubmit: (url: string) => Promise<void>,
@@ -39,7 +41,6 @@ export class EventManager {
     private onGenerateFeed: () => Promise<void>,
     private onCopyFeedUrl: () => Promise<void>,
     private updateFeedItems: (elementPath: string, buttonId: string) => void,
-    private state: RSSState,
     private ui: UIManager,
   ) {}
 
@@ -90,12 +91,12 @@ export class EventManager {
     this.urlForm = document.getElementById("urlForm") as HTMLFormElement;
     if (!this.urlForm) return;
 
-    // Use arrow function to preserve 'this' context
     this.urlForm.addEventListener("submit", this.handleUrlSubmit);
   }
 
   public registerElementSelectors(): void {
     const targetButtons = document.querySelectorAll(".target");
+
     targetButtons.forEach((button) => {
       button.addEventListener("click", () => {
         this.handleToggleSelection(button.id);
@@ -121,8 +122,6 @@ export class EventManager {
 
     if (!this.dialog || !this.closeButton || !this.copyButton) return;
 
-    this.copyButton.textContent = "Copy link";
-
     // Dialog close button
     this.closeButton.addEventListener("click", this.handleDialogClose);
 
@@ -131,31 +130,32 @@ export class EventManager {
 
     // Click outside dialog to close
     this.dialog.addEventListener("click", this.handleDialogClickOutside);
-
-    this.dialog.addEventListener("click", (e) => {
-      const dialogDimensions = this.dialog?.getBoundingClientRect();
-      if (!dialogDimensions) return;
-
-      if (
-        e.clientX < dialogDimensions.left ||
-        e.clientX > dialogDimensions.right ||
-        e.clientY < dialogDimensions.top ||
-        e.clientY > dialogDimensions.bottom
-      ) {
-        this.ui.closeDialog();
-      }
-    });
   }
 
-  public registerIframeEventListeners(): void {
-    this.state.iframeDocument!.addEventListener(
-      "click",
-      this.currentElementClickHandler,
-    );
+  public registerIframeEvents(): void {
+    const { iframeDocument } = store.getState();
+
+    iframeDocument?.addEventListener("mouseover", (event) => {
+      const target = event.target as HTMLElement;
+
+      if (this.hasDirectText(target)) {
+        target.addEventListener("mouseenter", () => {
+          target.style.border = "1px solid pink";
+          target.style.cursor = "pointer";
+        });
+
+        target.addEventListener("mouseleave", () => {
+          target.style.border = "";
+        });
+      }
+    });
+
+    iframeDocument!.addEventListener("click", this.currentElementClickHandler);
   }
 
   public registerIframeEventClear(): void {
-    this.state.iframeDocument!.removeEventListener(
+    const { iframeDocument } = store.getState();
+    iframeDocument!.removeEventListener(
       "click",
       this.currentElementClickHandler,
     );
@@ -199,4 +199,10 @@ export class EventManager {
       this.dialog.close();
     }
   };
+
+  private hasDirectText(element: Element): boolean {
+    return Array.from(element.childNodes).some(
+      (node) => node.nodeType === Node.TEXT_NODE && node.textContent?.trim(),
+    );
+  }
 }
