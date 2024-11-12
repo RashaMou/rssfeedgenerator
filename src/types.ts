@@ -1,16 +1,20 @@
-import { FeedItem } from "../server/services/types";
-
-interface RSSState {
-  status: "loading" | "error" | "";
-  feedLink: string;
-  currentUrl: string;
-  preview: string | null;
-  iframeDocument: Document | null;
+interface AnalysisResult {
+  items: any[];
   html: string;
-  originalFeedItems: FeedItem[];
-  currentFeedItems: FeedItem[];
-  selectionMode: boolean;
-  activeSelector: string;
+}
+
+interface AnalysisResponse {
+  success: boolean;
+  error?: {
+    message: string;
+  };
+  result: AnalysisResult; // Make result non-optional since we check success
+}
+
+interface APIError extends Error {
+  status?: number;
+  statusText?: string;
+  type: "network" | "http" | "unknown";
 }
 
 interface Templates {
@@ -21,11 +25,4 @@ interface Templates {
   inputForm: HTMLTemplateElement;
 }
 
-interface RSSMappings {
-  title: string;
-  date: string;
-  content: string;
-  author: string;
-}
-
-export type { RSSState, Templates, RSSMappings };
+export type { Templates, APIError, AnalysisResult, AnalysisResponse };

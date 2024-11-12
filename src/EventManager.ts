@@ -1,7 +1,3 @@
-import { UIManager } from "./UIManager";
-import { store } from "./store";
-import getElementPath from "./utils/getElementPath";
-
 /**
  * EventManager
  *
@@ -24,6 +20,9 @@ import getElementPath from "./utils/getElementPath";
  * eventManager.registerDialogEvents();
  * ```
  */
+import { store } from "./store";
+import getElementPath from "./utils/getElementPath";
+
 export class EventManager {
   private urlForm: HTMLFormElement | null = null;
   private generateButton: HTMLButtonElement | null = null;
@@ -41,7 +40,6 @@ export class EventManager {
     private onGenerateFeed: () => Promise<void>,
     private onCopyFeedUrl: () => Promise<void>,
     private updateFeedItems: (elementPath: string, buttonId: string) => void,
-    private ui: UIManager,
   ) {}
 
   private handleElementClick(event: Event, buttonId: string): void {

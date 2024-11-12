@@ -4,6 +4,8 @@ import { TemplateManager } from "./TemplateManager";
 import { EventManager } from "./EventManager";
 import { ViewManager } from "./ViewManager";
 import { store } from "./store";
+import { APIClient } from "./APIClient.js";
+import { APIError } from "./types.js";
 
 export class RSSApp {
   private templateManager: TemplateManager;
@@ -100,21 +102,7 @@ export class RSSApp {
       // Step 1: Analyze Website Structure
       await this.ui.showLoading("Analyzing website structure...");
 
-      const response = await fetch(
-        `/api/analyze/${encodeURIComponent(currentUrl)}`,
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        },
-      );
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const analysisResult = await response.json();
+      const analysisResult = await APIClient.analyzeWebsite(currentUrl);
 
       if (analysisResult.error) {
         this.ui.showError(analysisResult.error.message);
@@ -186,16 +174,7 @@ export class RSSApp {
   private async onGenerateFeed(): Promise<void> {
     const { currentFeedItems, currentUrl } = store.getState();
 
-    const response = await fetch("/api/generate-feed", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        feedItems: currentFeedItems,
-        siteUrl: currentUrl,
-      }),
-    });
-
-    const feedLink = await response.text();
+    const feedLink = await APIClient.generateFeed(currentFeedItems, currentUrl);
     store.setFeedLink(feedLink);
 
     const rssUrlElement = document.getElementById(
@@ -246,30 +225,20 @@ export class RSSApp {
 
       // Check if website exists by making a HEAD request
       try {
-        const response = await fetch(
-          `/api/check-url/${encodeURIComponent(urlToCheck)}`,
-          {
-            method: "GET",
-            headers: {
-              "Content-Type": "application/json",
-            },
-          },
-        );
-
-        if (!response.ok) {
+        const validatedUrl = await APIClient.checkUrl(urlToCheck);
+        return validatedUrl;
+      } catch (error) {
+        if ((error as APIError).type === "network") {
+          this.ui.showError(
+            "Unable to reach this website. Please check the URL and try again.",
+          );
+        } else {
           this.ui.showError(
             "This website appears to be unavailable. Please check the URL and try again.",
           );
-          return "";
         }
-      } catch (networkError) {
-        this.ui.showError(
-          "Unable to reach this website. Please check the URL and try again.",
-        );
         return "";
       }
-
-      return urlToCheck;
     } catch (error) {
       this.ui.showError("Please enter a valid URL");
       return "";
