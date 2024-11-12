@@ -13,7 +13,6 @@ import getElementPath from "./utils/getElementPath";
  * Interactions with Other Classes:
  * - `ViewManager`: The `EventManager` works closely with `ViewManager` by setting up event
  *   listeners for UI interactions specific to views, such as form submissions.
- * - `UIManager`: Uses `UIManager` indirectly by triggering UI-related callbacks when events occur.
  * - `RSSApp`: `RSSApp` coordinates the instantiation of `EventManager` and provides the appropriate
  *   callback functions for handling each specific event.
  *
