@@ -27,6 +27,13 @@ export class HTMLParsingError extends BaseError {
   }
 }
 
+export class NotFoundError extends BaseError {
+  constructor(message: string = 'Resource not found') {
+    super(message, 404, 'NOT_FOUND');
+    this.name = "NotFoundError"
+  }
+}
+
 export class FeedError extends BaseError {
   constructor(message: string, code: 'INVALID_STRUCTURE' | 'DATE_PARSING' | 'XML_GENERATION') {
     super(message, 422, `FEED_${code}`);
