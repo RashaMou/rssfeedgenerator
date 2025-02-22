@@ -4,6 +4,7 @@ import generateFeed from "./services/generateFeed.js";
 import { AnalysisResult } from "./services/types.js";
 import logger from "./logger.js";
 import config from "./config.js";
+import { asyncHandler } from "./middleware/asyncHandler.js";
 
 const router = express.Router();
 const feedStore = new Map();
@@ -11,12 +12,6 @@ const feedStore = new Map();
 router.get("/", (_: Request, res: Response) => {
   res.send("Hello from the server");
 });
-
-// Error handling middleware
-const asyncHandler =
-  (fn: Function) => (req: Request, res: Response, next: NextFunction) => {
-    Promise.resolve(fn(req, res, next)).catch(next);
-  };
 
 // Routes
 router.get(
@@ -132,17 +127,5 @@ router.get(
     }
   }),
 );
-
-// Global error handler
-router.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
-  logger.error(err.stack);
-  res.status(500).json({
-    success: false,
-    error:
-      process.env.NODE_ENV === "production"
-        ? "Internal server error"
-        : err.message,
-  });
-});
 
 export default router;
