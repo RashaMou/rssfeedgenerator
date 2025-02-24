@@ -335,39 +335,6 @@ export class RSSApp {
       return "";
     }
   }
-  // private validateUrl(url: string): boolean {
-  //   try {
-  //     // Check if URL is empty or just whitespace
-  //     if (!url.trim()) {
-  //       this.errorElement.textContent = "URL cannot be empty";
-  //       this.updateStatus("error");
-  //       return false;
-  //     }
-  //
-  //     // Create URL object to validate format
-  //     const urlObject = new URL(url);
-  //
-  //     // Check protocol
-  //     if (!["http:", "https:"].includes(urlObject.protocol)) {
-  //       this.errorElement.textContent = "URL must use http or https protocol";
-  //       this.updateStatus("error");
-  //       return false;
-  //     }
-  //
-  //     // Check if has valid domain
-  //     if (!urlObject.hostname) {
-  //       this.errorElement.textContent = "URL must have a valid domain";
-  //       this.updateStatus("error");
-  //       return false;
-  //     }
-  //
-  //     return true;
-  //   } catch (error) {
-  //     this.errorElement.textContent = "Please enter a valid URL";
-  //     this.updateStatus("error");
-  //     return false;
-  //   }
-  // }
 
   private toggleSelectionMode(buttonId: string): void {
     // if we don't already have an activeSelector
@@ -487,7 +454,7 @@ export class RSSApp {
     this.state.currentUrl = "";
     const form = e.target as HTMLFormElement;
     const input = form.querySelector("input")?.value as string;
-    const validatedUrl = await this.validateUrl(input); // Add await here
+    const validatedUrl = await this.validateUrl(input);
 
     if (!validatedUrl) {
       this.updateStatus("error");

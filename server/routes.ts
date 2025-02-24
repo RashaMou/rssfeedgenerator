@@ -4,6 +4,8 @@ import generateFeed from "./services/generateFeed.js";
 import { AnalysisResult } from "./services/types.js";
 import logger from "./logger.js";
 import config from "./config.js";
+import { asyncHandler } from "./middleware/asyncHandler.js";
+import { NotFoundError, URLProcessingError, HTMLParsingError } from "./types/errors.js";
 
 const router = express.Router();
 const feedStore = new Map();
@@ -12,52 +14,22 @@ router.get("/", (_: Request, res: Response) => {
   res.send("Hello from the server");
 });
 
-// Error handling middleware
-const asyncHandler =
-  (fn: Function) => (req: Request, res: Response, next: NextFunction) => {
-    Promise.resolve(fn(req, res, next)).catch(next);
-  };
-
 // Routes
 router.get(
   "/analyze/:url",
   asyncHandler(async (req: Request, res: Response) => {
+    // we already do this in check-url. can't we pass it to this?
     const decodedUrl = decodeURIComponent(req.params.url);
     logger.info("got url to analyze:", decodedUrl);
 
-    let result: AnalysisResult | null;
 
-    try {
-      const feedAnalyzer = new HtmlParser(decodedUrl);
-      result = await feedAnalyzer.analyze();
+    const result = await new HtmlParser(decodedUrl).analyze();
 
-      if (result && result.error) {
-        // Send error response with appropriate status code
-        res.status(result.error.statusCode || 500).json({
-          success: false,
-          error: result.error.message,
-          result,
-        });
-        return;
-      }
-
-      res.json({ success: true, result });
-    } catch (error) {
-      logger.error("Error analyzing URL", { url: decodedUrl, error: error });
-      res.status(500).json({
-        success: false,
-        error: "Failed to analyze URL",
-        result: {
-          items: [],
-          logs: [],
-          html: "",
-          error: {
-            message: error instanceof Error ? error.message : "Unknown error",
-            statusCode: 500,
-          },
-        },
-      });
+    if (result?.error) {
+      throw new HTMLParsingError(result.error.message, 'INVALID_STRUCTURE');
     }
+
+    res.json({ success: true, result });
   }),
 );
 
@@ -67,6 +39,7 @@ router.post(
     const { feedItems, siteUrl } = req.body;
 
     const { feedXml, feedId } = generateFeed(feedItems, siteUrl);
+
     feedStore.set(feedId, { feedXml, feedItems, siteUrl });
 
     const feedUrl = new URL(
@@ -85,8 +58,7 @@ router.get(
     const feedData = feedStore.get(feedId);
 
     if (!feedData) {
-      res.status(404).send("Feed not found");
-      return;
+      throw new NotFoundError(`Feed with ID ${feedId} not found`);
     }
 
     res.set("Content-Type", "text/xml");
@@ -111,7 +83,7 @@ router.get(
     const decodedUrl = decodeURIComponent(req.params.url);
 
     if (!decodedUrl) {
-      return res.status(400).json({ error: "URL parameter is required" });
+      throw new URLProcessingError('URL parameter is required', 'INVALID_FORMAT');
     }
 
     try {
@@ -122,27 +94,18 @@ router.get(
         },
       });
 
-      if (response.ok) {
-        res.status(200).json({ status: "ok" });
-      } else {
-        res.status(404).json({ error: "Website not found" });
+      if (!response.ok) {
+        throw new URLProcessingError('Website not found', 'UNREACHABLE');
       }
+      res.status(200).json({ status: "ok" });
     } catch (error) {
-      res.status(500).json({ error: "Unable to reach website" });
+      if (error instanceof URLProcessingError) {
+        throw error;
+      }
+
+      throw new URLProcessingError('Unable to reach website', 'UNREACHABLE');
     }
   }),
 );
-
-// Global error handler
-router.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
-  logger.error(err.stack);
-  res.status(500).json({
-    success: false,
-    error:
-      process.env.NODE_ENV === "production"
-        ? "Internal server error"
-        : err.message,
-  });
-});
 
 export default router;

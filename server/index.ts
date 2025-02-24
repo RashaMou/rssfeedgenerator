@@ -5,13 +5,13 @@ import routes from "./routes.js";
 import dotenv from "dotenv";
 import config from "./config.js";
 import logger from "./logger.js";
+import { errorHandler } from "./middleware/errorHandler.js";
 
 dotenv.config();
 
 const app: Express = express();
 const port: number = parseInt(process.env.PORT || "8080", 10);
 
-// Security headers
 app.use((_req: Request, res: Response, next: NextFunction) => {
   res.setHeader("X-Content-Type-Options", "nosniff");
   res.setHeader("X-Frame-Options", "DENY");
@@ -19,10 +19,8 @@ app.use((_req: Request, res: Response, next: NextFunction) => {
   next();
 });
 
-// Serve frontend static files from the "dist/client" directory
 app.use(express.static(join(process.cwd(), "dist/client")));
 
-// Middleware
 app.use(
   cors({
     origin: config.baseUrl,
@@ -32,6 +30,8 @@ app.use(
 );
 
 app.use(express.json({ limit: "1mb" }));
+
+app.use(errorHandler);
 
 // Routes
 app.use("/api", routes);
